@@ -1,2 +1,11 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿namespace live_trivia;
+
+class Program
+{
+    public List<Player> Players { get; set; } = new List<Player>();
+    public QuestionBank QuestionBank { get; set; }
+    public Question CurrentQuestion { get; set; }
+    public int CurrentRound { get; set; }
+
+}
+
