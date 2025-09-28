@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LiveTriviaBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+56bce15b7731021bcd45e9736d431d9ec0a8b45d")]
 [assembly: System.Reflection.AssemblyProductAttribute("LiveTriviaBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LiveTriviaBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
