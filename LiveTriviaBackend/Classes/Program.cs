@@ -45,18 +45,49 @@ app.MapGet("/weatherforecast", () =>
 
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>(); // Updated name
+    var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
 
-    // Only load questions if database is empty
+    // Ensure database tables are created
+    await context.Database.EnsureCreatedAsync();
+
+    // Only load questions if table is empty
     if (!context.Questions.Any())
     {
-        var questionBank = new QuestionBank("questions.json");
-        context.Questions.AddRange(questionBank.Questions);
-        context.SaveChanges();
-        Console.WriteLine("Loaded questions into database!");
+        try
+        {
+            var questionBank = new QuestionBank("questions.json");
+            context.Questions.AddRange(questionBank.Questions);
+            await context.SaveChangesAsync();
+            Console.WriteLine("Loaded questions into database!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading questions: {ex.Message}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("Questions already loaded.");
     }
 }
+app.MapGet("/questions/test", (TriviaDbContext context) =>
+{
+    var questionCount = context.Questions.Count();
+    var sampleQuestion = context.Questions.First();
 
+    return new
+    {
+        TotalQuestions = questionCount,
+        SampleQuestion = new
+        {
+            sampleQuestion.Text,
+            sampleQuestion.Answers,
+            sampleQuestion.CorrectAnswerIndexes,
+            sampleQuestion.Difficulty,
+            sampleQuestion.Category
+        }
+    };
+});
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

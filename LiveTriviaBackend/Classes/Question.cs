@@ -1,10 +1,17 @@
 ﻿namespace live_trivia;
+using System.Text.Json.Serialization;
 
 public class Question
 {
     public int Id { get; set; }
+
+    [JsonPropertyName("question")]
     public string Text { get; set; }
+
+    [JsonPropertyName("answers")]
     public List<string> Answers { get; set; }
+
+    [JsonPropertyName("answerIndexes")]
     public List<int> CorrectAnswerIndexes { get; set; }
     public string Difficulty { get; set; }
     public string Category { get; set; }
