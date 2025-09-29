@@ -74,3 +74,25 @@
 - Players answer on their own devices (phone/laptop).
 - Answers are locked once submitted.
 - If the timer ends, unanswered players are automatically locked out.
+
+---
+
+### Create Database for local development
+
+```bash
+# Create the database
+sudo -u postgres createdb livetrivia
+# Or using psql:
+psql -U postgres -c "CREATE DATABASE livetrivia;"
+
+
+cd LiveTriviaBackend/
+dotnet run
+```
+
+Now the questions.json is loaded in your local database
+
+---
+
+When the program is running you can enter /questions/random to get a random question from the database.<br>
+Or you can type /questions/category/{category} to see all the nifty little questions of a certain category!
