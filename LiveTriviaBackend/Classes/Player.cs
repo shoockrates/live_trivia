@@ -1,14 +1,11 @@
 ﻿namespace live_trivia;
 
-public class Player
+public class Player : IComparable<Player>
 {
     public int Id { get; set; }
-
     public string Name { get; set; }
-
     public int Score { get; set; }
-
-    public int CurrentAnswerIndex { get; set; }
+    public List<int> CurrentAnswerIndexes { get; set; } = new List<int>();
 
 
     public Player() { }
@@ -17,12 +14,22 @@ public class Player
         Id = id;
         Name = name;
         Score = 0;
-        CurrentAnswerIndex = -1; // -1 means no answer selected yet
+        CurrentAnswerIndexes = new List<int>();
     }
 
     public void SubmitAnswer(int answerIndex)
     {
-        CurrentAnswerIndex = answerIndex;
+        if (!CurrentAnswerIndexes.Contains(answerIndex)) CurrentAnswerIndexes.Add(answerIndex);
+    }
+
+    public void ClearAnswer(int answerValue)
+    {
+        CurrentAnswerIndexes.Remove(answerValue);
+    }
+
+    public void ClearAnswer()
+    {
+        CurrentAnswerIndexes.Clear();
     }
 
     public void AddScore(int points)
@@ -30,8 +37,9 @@ public class Player
         Score += points;
     }
 
-    public void ResetAnswer()
+    public int CompareTo(Player? other)
     {
-        CurrentAnswerIndex = -1;
+        if (other == null) return 1;
+        return other.Score.CompareTo(this.Score);
     }
 }
