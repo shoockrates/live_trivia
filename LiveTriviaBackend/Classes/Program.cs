@@ -22,42 +22,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
 app.MapGet("/", () => "LiveTriviaBackend is running!");
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
 
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
 
-    // Ensure database tables are created
-    await context.Database.EnsureCreatedAsync();
+    // Remove async calls or make them synchronous
+    context.Database.EnsureCreated(); // Remove "await" and "Async"
 
-    // Only load questions if table is empty
     if (!context.Questions.Any())
     {
         try
         {
             var questionBank = new QuestionBank("questions.json");
             context.Questions.AddRange(questionBank.Questions);
-            await context.SaveChangesAsync();
+            context.SaveChanges(); // Remove "await"
             Console.WriteLine("Loaded questions into database!");
         }
         catch (Exception ex)
@@ -70,27 +50,45 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("Questions already loaded.");
     }
 }
-app.MapGet("/questions/test", (TriviaDbContext context) =>
-{
-    var questionCount = context.Questions.Count();
-    var sampleQuestion = context.Questions.First();
 
-    return new
-    {
-        TotalQuestions = questionCount,
-        SampleQuestion = new
-        {
-            sampleQuestion.Text,
-            sampleQuestion.Answers,
-            sampleQuestion.CorrectAnswerIndexes,
-            sampleQuestion.Difficulty,
-            sampleQuestion.Category
-        }
-    };
+// Create a new game room
+app.MapPost("/games/{roomId}", async (string roomId, TriviaDbContext context) =>
+{
+    var game = new Game(roomId);
+    context.Games.Add(game);
+    await context.SaveChangesAsync();
+    return Results.Created($"/games/{roomId}", game);
 });
+
+
+// Join a game
+app.MapPost("/games/{roomId}/players", async (string roomId, string playerName, TriviaDbContext context) =>
+{
+    var game = await context.Games.FindAsync(roomId);
+    if (game == null) return Results.NotFound("Game not found");
+    var player = new Player { Name = playerName };
+    game.addPlayer(player);
+    await context.SaveChangesAsync();
+    return Results.Ok(player);
+});
+
+// Get random question
+app.MapGet("/questions/random", async (TriviaDbContext context) =>
+{
+    var count = await context.Questions.CountAsync();
+    var random = new Random().Next(count);
+    var question = await context.Questions.Skip(random).FirstAsync();
+    return Results.Ok(question);
+});
+
+// Get questions by category
+app.MapGet("/questions/category/{category}", async (string category, TriviaDbContext context) =>
+{
+    var questions = await context.Questions
+        .Where(q => q.Category == category)
+        .ToListAsync();
+    return Results.Ok(questions);
+});
+
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

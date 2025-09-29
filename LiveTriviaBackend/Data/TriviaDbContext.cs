@@ -30,7 +30,7 @@ namespace live_trivia.Data
                         v => JsonSerializer.Deserialize<List<int>>(v, new JsonSerializerOptions()) ?? new List<int>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<int>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
             });
@@ -49,7 +49,7 @@ namespace live_trivia.Data
                         v => JsonSerializer.Deserialize<List<Player>>(v, new JsonSerializerOptions()) ?? new List<Player>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<Player>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
 
@@ -59,7 +59,7 @@ namespace live_trivia.Data
                         v => JsonSerializer.Deserialize<List<Question>>(v, new JsonSerializerOptions()) ?? new List<Question>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<Question>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
             });
@@ -80,7 +80,7 @@ namespace live_trivia.Data
                         v => JsonSerializer.Deserialize<List<string>>(v, new JsonSerializerOptions()) ?? new List<string>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
 
@@ -90,7 +90,7 @@ namespace live_trivia.Data
                         v => JsonSerializer.Deserialize<List<int>>(v, new JsonSerializerOptions()) ?? new List<int>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<int>>(
-                        (c1, c2) => c1.SequenceEqual(c2),
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
             });
