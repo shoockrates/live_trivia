@@ -2,6 +2,7 @@
 
 public class Question
 {
+    public int Id { get; set; }
     public string Text { get; set; }
     public List<string> Answers { get; set; }
     public List<int> CorrectAnswerIndexes { get; set; }
@@ -29,7 +30,14 @@ public class Question
     }
 
 
-    public Question() { }
+    public Question()
+    {
+        Category = string.Empty;
+        Difficulty = string.Empty;
+        Text = string.Empty;
+        CorrectAnswerIndexes = new List<int>();
+        Answers = new List<string>();
+    }
 
     public bool IsCorrect(int answerIndex)
     {

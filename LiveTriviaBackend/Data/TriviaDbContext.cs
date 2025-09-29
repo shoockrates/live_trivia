@@ -1,0 +1,75 @@
+using Microsoft.EntityFrameworkCore;
+using live_trivia;
+using System.Text.Json;
+
+namespace live_trivia.Data
+{
+    public class TriviaDbContext : DbContext
+    {
+        public TriviaDbContext(DbContextOptions<TriviaDbContext> options) : base(options) { }
+
+        public DbSet<Player> Players { get; set; }
+        public DbSet<Game> Games { get; set; }
+        public DbSet<Question> Questions { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // Configure Player table
+            modelBuilder.Entity<Player>(entity =>
+            {
+                entity.HasKey(p => p.Id);
+                entity.Property(p => p.Id).ValueGeneratedOnAdd();
+                entity.Property(p => p.Name).IsRequired().HasMaxLength(100);
+                entity.Property(p => p.Score).HasDefaultValue(0);
+
+                entity.Property(p => p.CurrentAnswerIndexes)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
+                        v => JsonSerializer.Deserialize<List<int>>(v, new JsonSerializerOptions()) ?? new List<int>()
+                    );
+            });
+
+            // Configure Game table
+            modelBuilder.Entity<Game>(entity =>
+            {
+                entity.HasKey(g => g.RoomId);
+                entity.Property(g => g.RoomId).HasMaxLength(50);
+                entity.Property(g => g.State).HasConversion<string>();
+
+                entity.Property(g => g.Players)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
+                        v => JsonSerializer.Deserialize<List<Player>>(v, new JsonSerializerOptions()) ?? new List<Player>()
+                    );
+
+                entity.Property(g => g.Questions)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
+                        v => JsonSerializer.Deserialize<List<Question>>(v, new JsonSerializerOptions()) ?? new List<Question>()
+                    );
+            });
+
+            // Configure Question table
+            modelBuilder.Entity<Question>(entity =>
+            {
+                entity.HasKey(q => q.Id);
+                entity.Property(q => q.Id).ValueGeneratedOnAdd();
+                entity.Property(q => q.Text).IsRequired();
+                entity.Property(q => q.Difficulty).IsRequired().HasMaxLength(20);
+                entity.Property(q => q.Category).IsRequired().HasMaxLength(50);
+
+                entity.Property(q => q.Answers)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
+                        v => JsonSerializer.Deserialize<List<string>>(v, new JsonSerializerOptions()) ?? new List<string>()
+                    );
+
+                entity.Property(q => q.CorrectAnswerIndexes)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
+                        v => JsonSerializer.Deserialize<List<int>>(v, new JsonSerializerOptions()) ?? new List<int>()
+                    );
+            });
+        }
+    }
+}
