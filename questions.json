@@ -49,7 +49,7 @@
             "1939",
             "1950"
         ],
-        "answerIndex": [
+        "answerIndexes": [
             1
         ],
         "difficulty": "medium",
@@ -91,7 +91,7 @@
             "Neville Chamberlain",
             "Clement Attlee"
         ],
-        "answerIndex": [
+        "answerIndexes": [
             2
         ],
         "difficulty": "hard",
