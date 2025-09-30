@@ -84,7 +84,7 @@
         "category": "History"
     },
     {
-        "question": "Who was the British Prime Minister durin the start of World War II?",
+        "question": "Who was the British Prime Minister during the start of World War II?",
         "answers": [
             "Winston Churchill",
             "Margaret Thatcher",
@@ -204,7 +204,8 @@
             "The Brothers Karamazov"
         ],
         "answerIndexes": [
-            0
+            0,
+            3
         ],
         "difficulty": "medium",
         "category": "Arts & Literature"
@@ -282,8 +283,8 @@
     {
         "question": "What is the capital of Norway?",
         "answers": [
+            "Bergen",
             "Oslo",
-            "Berghen",
             "Stockholm",
             "Copenhagen"
         ],

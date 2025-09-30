@@ -28,8 +28,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
 
-    // Remove async calls or make them synchronous
-    context.Database.EnsureCreated(); // Remove "await" and "Async"
+    context.Database.EnsureCreated();
 
     if (!context.Questions.Any())
     {
@@ -37,7 +36,7 @@ using (var scope = app.Services.CreateScope())
         {
             var questionBank = new QuestionBank("questions.json");
             context.Questions.AddRange(questionBank.Questions);
-            context.SaveChanges(); // Remove "await"
+            context.SaveChanges();
             Console.WriteLine("Loaded questions into database!");
         }
         catch (Exception ex)
