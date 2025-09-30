@@ -3,12 +3,16 @@
 public class Player : IComparable<Player>
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = string.Empty;
     public int Score { get; set; }
     public List<int> CurrentAnswerIndexes { get; set; } = new List<int>();
+    public string? GameRoomId { get; set; }
 
 
-    public Player() { }
+    public Player()
+    {
+        Name = string.Empty;
+    }
     public Player(int id, string name)
     {
         Id = id;
