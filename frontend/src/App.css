@@ -1,38 +1,226 @@
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
   min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(1100px 700px at 50% 30%, #141a22 0%, #0c1117 70%, #0a0e13 100%);
+  color: #eaf2f8;
+  text-align: center;
+  font-synthesis-weight: none;
+}
+
+.TriviaContainer {
+  width: 100%;
+  max-width: 900px;
+  padding: 18px;
+}
+
+.HeroCard {
+  margin: 0 auto;
+  max-width: 980px;
+  position: relative;
+  background: linear-gradient(135deg, rgba(20, 28, 36, 0.35), rgba(10, 14, 19, 0.18));
+  color: inherit;
+  border: 1px solid rgba(156, 200, 255, 0.08);
+  border-radius: 16px;
+  padding: 24px 20px 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 26px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(8px) saturate(115%);
+  -webkit-backdrop-filter: blur(8px) saturate(115%);
+  animation: fadeIn 700ms ease both;
+}
+
+.HeroTitle {
+  margin: 0 0 8px 0;
+  font-size: clamp(32px, 5vw, 54px);
+  color: #eaf2f8;
+}
+
+.HeroSubtitle {
+  margin: 0 0 26px 0;
+  opacity: 0.75;
+  color: #c9d7e6;
+}
+
+.ButtonsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: center;
+  justify-items: center;
+  animation: fadeIn 700ms ease-out both;
+}
+
+.ButtonsGrid.minimal {
+  gap: 14px;
+}
+
+.TriviaButton {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(156, 200, 255, 0.25);
+  color: #eaf2f8;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+  transition: transform 320ms ease, box-shadow 320ms ease, background-color 320ms ease, opacity 320ms ease, border-color 320ms ease;
+}
+
+.TriviaButton.gradient {
+  color: #ffffff;
+  border: none;
+  background: linear-gradient(135deg, #6e7bff 0%, #58c3ff 50%, #6ef2ff 100%);
+  box-shadow: 0 10px 24px rgba(94, 167, 255, 0.35);
+}
+
+.TriviaButton:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 14px 24px rgba(156, 200, 255, 0.15);
+  background-color: rgba(156, 200, 255, 0.08);
+  border-color: rgba(156, 200, 255, 0.35);
+}
+
+.TriviaButton:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.SelectionStage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 12px;
+  animation: titleZoomIn 700ms 120ms ease both;
 }
 
-.App-link {
-  color: #61dafb;
+.CategoryTitle {
+  margin: -6px 0 16px 0; /* lift title up and add more spacing below */
+  font-size: clamp(32px, 6vw, 64px);
+  line-height: 1.1;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #9cc8ff, #a6ffe7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 28px rgba(156, 200, 255, 0.18);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.minimalTitle {
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+.QuestionPlaceholder {
+  width: 100%;
+  max-width: 720px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(156, 200, 255, 0.18);
+  border-radius: 14px;
+  padding: 14px 18px;
+  box-shadow: 0 8px 26px rgba(156, 200, 255, 0.10), 0 8px 26px rgba(0, 0, 0, 0.35);
+  animation: fadeIn 720ms 160ms ease both;
+}
+
+.QuestionPlaceholder .Hint {
+  opacity: 0.75;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.minimalCard {
+  backdrop-filter: blur(4px);
+}
+
+/* Question card + text spacing */
+.QuestionCard {
+  width: 100%;
+  max-width: 760px;
+}
+.QuestionText {
+  margin-bottom: 14px;
+}
+
+/* Answers arranged in a natural 2x2 layout */
+.AnswersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 14px 16px;
+  justify-items: stretch;
+}
+
+/* Slight offsets for a more organic look */
+.AnswersGrid .btn-green { transform: translateY(0); }
+.AnswersGrid .btn-blue { transform: translateY(2px); }
+.AnswersGrid .btn-red { transform: translateY(-1px); }
+.AnswersGrid .btn-yellow { transform: translateY(1px); }
+
+.AnswersGrid .TriviaButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Color themes for the four buttons */
+.btn-green {
+  background-color: #2ecc71;
+  color: #ffffff;
+  border: none;
+}
+.btn-blue {
+  background-color: #3498db;
+  color: #ffffff;
+  border: none;
+}
+.btn-red {
+  background-color: #e74c3c;
+  color: #ffffff;
+  border: none;
+}
+.btn-yellow {
+  background-color: #f1c40f;
+  color: #1f2a37;
+  border: none;
+}
+
+.BackButton {
+  margin-top: 4px;
+  appearance: none;
+  background: transparent;
+  color: #eaf2f8;
+  border: 1px solid rgba(156, 200, 255, 0.25);
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 320ms ease, background-color 320ms ease, box-shadow 320ms ease, border-color 320ms ease;
+}
+
+.BackButton:hover {
+  background-color: rgba(156, 200, 255, 0.08);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(156, 200, 255, 0.12);
+}
+
+/* Enlarge/Shrink stages */
+.growIn { animation: growIn 520ms ease both; }
+.shrinkOut { animation: shrinkOut 400ms ease both; }
+
+@keyframes growIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shrinkOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.96); opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes titleZoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
