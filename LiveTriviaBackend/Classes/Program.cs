@@ -7,6 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+// Simple CORS for frontend requests
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+});
+
+// Register QuestionBank to read from questions.json
+builder.Services.AddSingleton(new QuestionBank("questions.json"));
 
 
 builder.Services.AddDbContext<TriviaDbContext>(options =>
@@ -21,34 +30,52 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.MapGet("/", () => "LiveTriviaBackend is running!");
 
-using (var scope = app.Services.CreateScope())
+try
 {
-    var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
-
-    context.Database.EnsureCreated();
-
-    if (!context.Questions.Any())
+    using (var scope = app.Services.CreateScope())
     {
-        try
+        var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
+
+        // Ensure DB exists and seed from JSON on first run
+        context.Database.EnsureCreated();
+
+        if (!context.Questions.Any())
         {
-            var questionBank = new QuestionBank("questions.json");
-            context.Questions.AddRange(questionBank.Questions);
-            context.SaveChanges();
-            Console.WriteLine("Loaded questions into database!");
+            try
+            {
+                var questionBank = new QuestionBank("questions.json");
+                context.Questions.AddRange(questionBank.Questions);
+                context.SaveChanges();
+                Console.WriteLine("Loaded questions into database!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading questions: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            Console.WriteLine($"Error loading questions: {ex.Message}");
+            Console.WriteLine("Questions already loaded.");
         }
-    }
-    else
-    {
-        Console.WriteLine("Questions already loaded.");
     }
 }
+catch (Exception ex)
+{
+    Console.WriteLine($"Database unavailable. Continuing without DB. Details: {ex.Message}");
+}
+
+// Simple endpoint to get questions from JSON by optional category
+app.MapGet("/questions", (string? category, QuestionBank questionBank) =>
+{
+    var questions = string.IsNullOrWhiteSpace(category)
+        ? questionBank.Questions
+        : questionBank.Questions.Where(q => string.Equals(q.Category, category, StringComparison.OrdinalIgnoreCase)).ToList();
+    return Results.Ok(questions);
+});
 
 // Create a new game room
 app.MapPost("/games/{roomId}", async (string roomId, TriviaDbContext context) =>
@@ -89,36 +116,5 @@ app.MapGet("/questions/category/{category}", async (string category, TriviaDbCon
     return Results.Ok(questions);
 });
 
-// Load a custom JSON file into the database curl -X POST http://localhost:5126/load/{filename.json}
-app.MapPost("/load/{file}", async (string file, TriviaDbContext context) =>
-{
-    try
-    {
-        if (!File.Exists(file))
-        {
-            return Results.NotFound($"File {file} not found.");
-        }
-
-        var questionBank = new QuestionBank(file);
-
-        var newQuestions = questionBank.Questions
-            .Where(q => !context.Questions.Any(existing => existing.Text == q.Text))
-            .ToList();
-
-        if (!newQuestions.Any())
-        {
-            return Results.Ok("No new questions to add.");
-        }
-
-        context.Questions.AddRange(newQuestions);
-        await context.SaveChangesAsync();
-
-        return Results.Ok($"{newQuestions.Count} questions loaded from {file}");
-    }
-    catch (Exception ex)
-    {
-        return Results.BadRequest($"Error loading questions: {ex.Message}");
-    }
-});
-
 app.Run();
+
