@@ -89,5 +89,36 @@ app.MapGet("/questions/category/{category}", async (string category, TriviaDbCon
     return Results.Ok(questions);
 });
 
-app.Run();
+// Load a custom JSON file into the database curl -X POST http://localhost:5126/load/{filename.json}
+app.MapPost("/load/{file}", async (string file, TriviaDbContext context) =>
+{
+    try
+    {
+        if (!File.Exists(file))
+        {
+            return Results.NotFound($"File {file} not found.");
+        }
 
+        var questionBank = new QuestionBank(file);
+
+        var newQuestions = questionBank.Questions
+            .Where(q => !context.Questions.Any(existing => existing.Text == q.Text))
+            .ToList();
+
+        if (!newQuestions.Any())
+        {
+            return Results.Ok("No new questions to add.");
+        }
+
+        context.Questions.AddRange(newQuestions);
+        await context.SaveChangesAsync();
+
+        return Results.Ok($"{newQuestions.Count} questions loaded from {file}");
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest($"Error loading questions: {ex.Message}");
+    }
+});
+
+app.Run();
