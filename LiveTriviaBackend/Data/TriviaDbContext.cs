@@ -23,7 +23,6 @@ namespace live_trivia.Data
                 entity.Property(p => p.Name).IsRequired().HasMaxLength(100);
                 entity.Property(p => p.Score).HasDefaultValue(0);
 
-                // FIXED: Added value comparer
                 entity.Property(p => p.CurrentAnswerIndexes)
                     .HasConversion(
                         v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
