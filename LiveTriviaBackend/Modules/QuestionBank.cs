@@ -18,7 +18,6 @@ public class QuestionBank
         Questions = JsonSerializer.Deserialize<List<Question>>(json, options) ?? new List<Question>();
     }
 
-    // Returns a random question from the list
     public Question GetRandomQuestion()
     {
         if (Questions.Count == 0)
@@ -36,9 +35,9 @@ public class QuestionBank
             throw new InvalidOperationException($"No questions found for category '{category}'.");
         int index = _random.Next(filtered.Count);
         return filtered[index];
+
+
     }
-
-
     public Question GetQuestionByDifficulty(string difficulty)
     {
         var filtered = Questions.Where(q => q.Difficulty.Equals(difficulty, StringComparison.OrdinalIgnoreCase)).ToList();
