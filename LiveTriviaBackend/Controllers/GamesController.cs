@@ -30,7 +30,7 @@ namespace live_trivia.Controllers
             if (game == null) return NotFound("Game not found");
 
             var player = new Player { Name = playerName };
-            game.addPlayer(player);
+            game.AddPlayer(player);
             await _context.SaveChangesAsync();
 
             return Ok(player);
