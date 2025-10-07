@@ -1,13 +1,13 @@
 ﻿namespace live_trivia;
 
-public class Player : IComparable<Player>
+public class Player : BaseEntity, IComparable<Player>
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Score { get; set; }
-    public List<int> CurrentAnswerIndexes { get; set; } = new List<int>();
-    public string? GameRoomId { get; set; }
 
+    public virtual ICollection<GamePlayer> GamePlayers { get; set; } = new List<GamePlayer>();
+    public virtual ICollection<PlayerAnswer> PlayerAnswers { get; set; } = new List<PlayerAnswer>();
 
     public Player()
     {
@@ -18,23 +18,8 @@ public class Player : IComparable<Player>
         Id = id;
         Name = name;
         Score = 0;
-        CurrentAnswerIndexes = new List<int>();
     }
 
-    public void SubmitAnswer(int answerIndex)
-    {
-        if (!CurrentAnswerIndexes.Contains(answerIndex)) CurrentAnswerIndexes.Add(answerIndex);
-    }
-
-    public void ClearAnswer(int answerValue)
-    {
-        CurrentAnswerIndexes.Remove(answerValue);
-    }
-
-    public void ClearAnswer()
-    {
-        CurrentAnswerIndexes.Clear();
-    }
 
     public void AddScore(int points)
     {

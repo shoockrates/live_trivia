@@ -12,9 +12,13 @@ namespace live_trivia.Data
         public DbSet<Player> Players { get; set; }
         public DbSet<Game> Games { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<GamePlayer> GamePlayers { get; set; }
+        public DbSet<PlayerAnswer> PlayerAnswers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            var jsonOptions = new JsonSerializerOptions();
+
             // Configure Player table
             modelBuilder.Entity<Player>(entity =>
             {
@@ -22,16 +26,12 @@ namespace live_trivia.Data
                 entity.Property(p => p.Id).ValueGeneratedOnAdd();
                 entity.Property(p => p.Name).IsRequired().HasMaxLength(100);
                 entity.Property(p => p.Score).HasDefaultValue(0);
+                entity.Property(p => p.CreatedAt).IsRequired();
+                entity.Property(p => p.UpdatedAt);
 
-                entity.Property(p => p.CurrentAnswerIndexes)
-                    .HasConversion(
-                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
-                        v => JsonSerializer.Deserialize<List<int>>(v, new JsonSerializerOptions()) ?? new List<int>()
-                    )
-                    .Metadata.SetValueComparer(new ValueComparer<List<int>>(
-                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                        c => c.ToList()));
+                // Indexes
+                entity.HasIndex(p => p.Name);
+                entity.HasIndex(p => p.Score);
             });
 
             // Configure Game table
@@ -40,27 +40,14 @@ namespace live_trivia.Data
                 entity.HasKey(g => g.RoomId);
                 entity.Property(g => g.RoomId).HasMaxLength(50);
                 entity.Property(g => g.State).HasConversion<string>();
+                entity.Property(g => g.CreatedAt).IsRequired();
+                entity.Property(g => g.UpdatedAt);
+                entity.Property(g => g.StartedAt);
+                entity.Property(g => g.EndedAt);
 
-                // FIXED: Added value comparers
-                entity.Property(g => g.Players)
-                    .HasConversion(
-                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
-                        v => JsonSerializer.Deserialize<List<Player>>(v, new JsonSerializerOptions()) ?? new List<Player>()
-                    )
-                    .Metadata.SetValueComparer(new ValueComparer<List<Player>>(
-                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                        c => c.ToList()));
-
-                entity.Property(g => g.Questions)
-                    .HasConversion(
-                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
-                        v => JsonSerializer.Deserialize<List<Question>>(v, new JsonSerializerOptions()) ?? new List<Question>()
-                    )
-                    .Metadata.SetValueComparer(new ValueComparer<List<Question>>(
-                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                        c => c.ToList()));
+                // Indexes
+                entity.HasIndex(g => g.State);
+                entity.HasIndex(g => g.CurrentQuestionIndex);
             });
 
             // Configure Question table
@@ -71,12 +58,14 @@ namespace live_trivia.Data
                 entity.Property(q => q.Text).IsRequired();
                 entity.Property(q => q.Difficulty).IsRequired().HasMaxLength(20);
                 entity.Property(q => q.Category).IsRequired().HasMaxLength(50);
+                entity.Property(q => q.CreatedAt).IsRequired();
+                entity.Property(q => q.UpdatedAt);
 
-                // FIXED: Added value comparers
+                // Configure JSON serialization for Answers and CorrectAnswerIndexes
                 entity.Property(q => q.Answers)
                     .HasConversion(
-                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
-                        v => JsonSerializer.Deserialize<List<string>>(v, new JsonSerializerOptions()) ?? new List<string>()
+                        v => JsonSerializer.Serialize(v, jsonOptions),
+                        v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new List<string>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<string>>(
                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
@@ -85,14 +74,93 @@ namespace live_trivia.Data
 
                 entity.Property(q => q.CorrectAnswerIndexes)
                     .HasConversion(
-                        v => JsonSerializer.Serialize(v, new JsonSerializerOptions()),
-                        v => JsonSerializer.Deserialize<List<int>>(v, new JsonSerializerOptions()) ?? new List<int>()
+                        v => JsonSerializer.Serialize(v, jsonOptions),
+                        v => JsonSerializer.Deserialize<List<int>>(v, jsonOptions) ?? new List<int>()
                     )
                     .Metadata.SetValueComparer(new ValueComparer<List<int>>(
                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
+
+                // Indexes
+                entity.HasIndex(q => q.Category);
+                entity.HasIndex(q => q.Difficulty);
+                entity.HasIndex(q => new { q.Category, q.Difficulty });
             });
+
+            // Configure GamePlayer table (many-to-many relationship)
+            modelBuilder.Entity<GamePlayer>(entity =>
+            {
+                entity.HasKey(gp => gp.Id);
+                entity.Property(gp => gp.Id).ValueGeneratedOnAdd();
+                entity.Property(gp => gp.JoinedAt).IsRequired();
+
+                // Composite unique constraint
+                entity.HasIndex(gp => new { gp.GameRoomId, gp.PlayerId }).IsUnique();
+
+                // Relationships
+                entity.HasOne(gp => gp.Game)
+                    .WithMany(g => g.GamePlayers)
+                    .HasForeignKey(gp => gp.GameRoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(gp => gp.Player)
+                    .WithMany(p => p.GamePlayers)
+                    .HasForeignKey(gp => gp.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure PlayerAnswer table
+            modelBuilder.Entity<PlayerAnswer>(entity =>
+            {
+                entity.HasKey(pa => pa.Id);
+                entity.Property(pa => pa.Id).ValueGeneratedOnAdd();
+                entity.Property(pa => pa.AnsweredAt).IsRequired();
+
+                // Configure JSON serialization for SelectedAnswerIndexes
+                entity.Property(pa => pa.SelectedAnswerIndexes)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, jsonOptions),
+                        v => JsonSerializer.Deserialize<List<int>>(v, jsonOptions) ?? new List<int>()
+                    )
+                    .Metadata.SetValueComparer(new ValueComparer<List<int>>(
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()));
+
+                // Index for performance
+                entity.HasIndex(pa => new { pa.GameRoomId, pa.PlayerId, pa.QuestionId });
+
+                // Relationships
+                entity.HasOne(pa => pa.Game)
+                    .WithMany(g => g.PlayerAnswers)
+                    .HasForeignKey(pa => pa.GameRoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(pa => pa.Player)
+                    .WithMany(p => p.PlayerAnswers)
+                    .HasForeignKey(pa => pa.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(pa => pa.Question)
+                    .WithMany(q => q.PlayerAnswers)
+                    .HasForeignKey(pa => pa.QuestionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure Game-Question many-to-many relationship
+            modelBuilder.Entity<Game>()
+                .HasMany(g => g.Questions)
+                .WithMany(q => q.Games)
+                .UsingEntity<Dictionary<string, object>>(
+                    "GameQuestion",
+                    j => j.HasOne<Question>().WithMany().HasForeignKey("QuestionId"),
+                    j => j.HasOne<Game>().WithMany().HasForeignKey("GameRoomId"),
+                    j =>
+                    {
+                        j.Property("GameRoomId").HasMaxLength(50);
+                        j.HasKey("GameRoomId", "QuestionId");
+                    });
         }
     }
 }

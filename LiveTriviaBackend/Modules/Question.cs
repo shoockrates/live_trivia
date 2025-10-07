@@ -1,54 +1,42 @@
-﻿namespace live_trivia;
-using System.Text.Json.Serialization;
-
-public class Question
+﻿namespace live_trivia
 {
-    public int Id { get; set; }
-
-    [JsonPropertyName("question")]
-    public string Text { get; set; }
-
-    [JsonPropertyName("answers")]
-    public List<string> Answers { get; set; }
-
-    [JsonPropertyName("answerIndexes")]
-    public List<int> CorrectAnswerIndexes { get; set; }
-    public string Difficulty { get; set; }
-    public string Category { get; set; }
-
-    public Question(string text, List<string> answers, List<int> correctAnswerIndexes, string difficulty, string category)
+    public class Question : BaseEntity
     {
-        if (string.IsNullOrWhiteSpace(text))
-            throw new ArgumentException("Question text cannot be empty.", nameof(text));
+        public int Id { get; set; }
+        public string Text { get; set; } = string.Empty;
+        public List<string> Answers { get; set; } = new List<string>();
+        public List<int> CorrectAnswerIndexes { get; set; } = new List<int>();
+        public string Difficulty { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
 
-        if (answers == null || answers.Count == 0)
-            throw new ArgumentException("There must be at least one answer.", nameof(answers));
+        public virtual ICollection<PlayerAnswer> PlayerAnswers { get; set; } = new List<PlayerAnswer>();
+        public virtual ICollection<Game> Games { get; set; } = new List<Game>();
 
-        if (correctAnswerIndexes == null || correctAnswerIndexes.Count == 0)
-            throw new ArgumentException("There must be at least one correct answer index.", nameof(correctAnswerIndexes));
+        public Question() { }
 
-        if (correctAnswerIndexes.Any(i => i < 0 || i >= answers.Count))
-            throw new ArgumentException("Correct answer index is out of range.", nameof(correctAnswerIndexes));
-        Text = text;
-        Answers = answers;
-        CorrectAnswerIndexes = correctAnswerIndexes;
-        Difficulty = difficulty;
-        Category = category;
+        public Question(string text, List<string> answers, List<int> correctAnswerIndexes, string difficulty, string category)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                throw new ArgumentException("Question text cannot be empty.", nameof(text));
+
+            if (answers == null || answers.Count == 0)
+                throw new ArgumentException("There must be at least one answer.", nameof(answers));
+
+            if (correctAnswerIndexes == null || correctAnswerIndexes.Count == 0)
+                throw new ArgumentException("There must be at least one correct answer index.", nameof(correctAnswerIndexes));
+
+            if (correctAnswerIndexes.Any(i => i < 0 || i >= answers.Count))
+                throw new ArgumentException("Correct answer index is out of range.", nameof(correctAnswerIndexes));
+            Text = text;
+            Answers = answers;
+            CorrectAnswerIndexes = correctAnswerIndexes;
+            Difficulty = difficulty;
+            Category = category;
+        }
+
+        public bool IsCorrect(int answerIndex)
+        {
+            return CorrectAnswerIndexes.Contains(answerIndex);
+        }
     }
-
-
-    public Question()
-    {
-        Category = string.Empty;
-        Difficulty = string.Empty;
-        Text = string.Empty;
-        CorrectAnswerIndexes = new List<int>();
-        Answers = new List<string>();
-    }
-
-    public bool IsCorrect(int answerIndex)
-    {
-        return CorrectAnswerIndexes.Contains(answerIndex);
-    }
-
 }
