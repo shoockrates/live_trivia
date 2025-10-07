@@ -1,9 +1,19 @@
-using live_trivia;
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000") // React default port
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -15,6 +25,8 @@ builder.Services.AddDbContext<TriviaDbContext>(options =>
 );
 
 var app = builder.Build();
+
+app.UseCors("AllowReactApp");
 
 if (app.Environment.IsDevelopment())
 {

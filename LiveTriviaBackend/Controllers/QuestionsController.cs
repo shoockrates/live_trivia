@@ -17,7 +17,13 @@ namespace LiveTriviaBackend.Controllers
             _context = context;
         }
 
-        
+        [HttpGet]
+        public async Task<IActionResult> GetAllQuestions()
+        {
+            var questions = await _context.Questions.ToListAsync();
+            return Ok(questions);
+        }
+
         [HttpGet("random")]
         public async Task<IActionResult> GetRandom()
         {
