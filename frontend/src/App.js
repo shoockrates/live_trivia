@@ -38,7 +38,7 @@ function App() {
     setLoading(true);
     setError(null);
     setCurrentIndex(0);
-    fetch(`${API_BASE}/questions?category=${encodeURIComponent(category)}`)
+    fetch(`${API_BASE}/questions/category/${encodeURIComponent(category)}`)
       .then(r => {
         if (!r.ok) throw new Error(`Failed to load ${category} (${r.status})`);
         return r.json();
