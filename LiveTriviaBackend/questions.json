@@ -1,6 +1,6 @@
 [
     {
-        "question": "Which empire was ruled by Genghis Khan?",
+        "text": "Which empire was ruled by Genghis Khan?",
         "answers": [
             "Ottoman Empire",
             "Mongol Empire",
@@ -14,7 +14,7 @@
         "category": "History"
     },
     {
-        "question": "Who was the leader of the Soviet Union during World War II?",
+        "text": "Who was the leader of the Soviet Union during World War II?",
         "answers": [
             "Vladimir Lenin",
             "Joseph Stalin",
@@ -28,7 +28,7 @@
         "category": "History"
     },
     {
-        "question": "Which country was the first to land humans on the Moon?",
+        "text": "Which country was the first to land humans on the Moon?",
         "answers": [
             "United States",
             "Soviet Union",
@@ -42,7 +42,7 @@
         "category": "History"
     },
     {
-        "question": "In which year did World War II end?",
+        "text": "In which year did World War II end?",
         "answers": [
             "1942",
             "1945",
@@ -56,7 +56,7 @@
         "category": "History"
     },
     {
-        "question": "The fall of the Berlin Wall happened in which year?",
+        "text": "The fall of the Berlin Wall happened in which year?",
         "answers": [
             "1987",
             "1989",
@@ -70,7 +70,7 @@
         "category": "History"
     },
     {
-        "question": "What year did the French Revolution begin?",
+        "text": "What year did the French Revolution begin?",
         "answers": [
             "1789",
             "1776",
@@ -84,7 +84,7 @@
         "category": "History"
     },
     {
-        "question": "Who was the British Prime Minister during the start of World War II?",
+        "text": "Who was the British Prime Minister during the start of World War II?",
         "answers": [
             "Winston Churchill",
             "Margaret Thatcher",
@@ -98,7 +98,7 @@
         "category": "History"
     },
     {
-        "question": "Which civilization built Machu Picchu?",
+        "text": "Which civilization built Machu Picchu?",
         "answers": [
             "Maya",
             "Inca",
@@ -112,7 +112,7 @@
         "category": "History"
     },
     {
-        "question": "Who issued the Golden Bull of 1356, which regulated the election of the Holy Roman Emperor?",
+        "text": "Who issued the Golden Bull of 1356, which regulated the election of the Holy Roman Emperor?",
         "answers": [
             "Charles IV",
             "Frederick I",
@@ -126,7 +126,7 @@
         "category": "History"
     },
     {
-        "question": "Who painted the Mona Lisa?",
+        "text": "Who painted the Mona Lisa?",
         "answers": [
             "Leonardo da Vinci",
             "Vincent van Gogh",
@@ -140,7 +140,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Who wrote 'The Tragedy of Macbeth'?",
+        "text": "Who wrote 'The Tragedy of Macbeth'?",
         "answers": [
             "William Shakespeare",
             "Charles Dickens",
@@ -154,7 +154,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Who is the author of the epic poem 'The Odyssey'?",
+        "text": "Who is the author of the epic poem 'The Odyssey'?",
         "answers": [
             "Homer",
             "Virgil",
@@ -168,7 +168,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "The 'Starry Night' painting was created by which artist?",
+        "text": "The 'Starry Night' painting was created by which artist?",
         "answers": [
             "Claude Monet",
             "Vincent van Gogh",
@@ -182,7 +182,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "In 'The Odyssey', who is Odysseus’ wife?",
+        "text": "In 'The Odyssey', who is Odysseus’ wife?",
         "answers": [
             "Penelope",
             "Helen",
@@ -196,7 +196,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Which of these is a novel written by Fyodor Dostoyevsky?",
+        "text": "Which of these is a novel written by Fyodor Dostoyevsky?",
         "answers": [
             "Crime and Punishment",
             "War and Peace",
@@ -211,7 +211,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Which Dutch painter is famous for 'Girl with a Pearl Earring'?",
+        "text": "Which Dutch painter is famous for 'Girl with a Pearl Earring'?",
         "answers": [
             "Rembrandt van Rijn",
             "Frans Hals",
@@ -225,7 +225,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Which Renaissance artist painted 'The Creation of Adam' on the Sistine Chapel ceiling?",
+        "text": "Which Renaissance artist painted 'The Creation of Adam' on the Sistine Chapel ceiling?",
         "answers": [
             "Leonardo da Vinci",
             "Raphael",
@@ -239,7 +239,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Which artist painted 'Impression, Sunrise', giving the Impressionist movement its name?",
+        "text": "Which artist painted 'Impression, Sunrise', giving the Impressionist movement its name?",
         "answers": [
             "Édouard Manet",
             "Claude Monet",
@@ -253,7 +253,7 @@
         "category": "Arts & Literature"
     },
     {
-        "question": "Mount Everest is located in which mountain range?",
+        "text": "Mount Everest is located in which mountain range?",
         "answers": [
             "Himalayas",
             "Andes",
@@ -267,7 +267,7 @@
         "category": "Geography"
     },
     {
-        "question": "Which continent is Egypt located in?",
+        "text": "Which continent is Egypt located in?",
         "answers": [
             "Asia",
             "Europe",
@@ -281,7 +281,7 @@
         "category": "Geography"
     },
     {
-        "question": "What is the capital of Norway?",
+        "text": "What is the capital of Norway?",
         "answers": [
             "Bergen",
             "Oslo",
@@ -295,7 +295,7 @@
         "category": "Geography"
     },
     {
-        "question": "The Ural Mountains are located in which country?",
+        "text": "The Ural Mountains are located in which country?",
         "answers": [
             "Russia",
             "Kazakhstan",
@@ -309,7 +309,7 @@
         "category": "Geography"
     },
     {
-        "question": "Which South American country has a coastline on both the Pacific and Atlantic Oceans?",
+        "text": "Which South American country has a coastline on both the Pacific and Atlantic Oceans?",
         "answers": [
             "Chile",
             "Brazil",
@@ -323,7 +323,7 @@
         "category": "Geography"
     },
     {
-        "question": "Which is the largest desert in the world?",
+        "text": "Which is the largest desert in the world?",
         "answers": [
             "Sahara",
             "Antarctic Desert",
@@ -337,7 +337,7 @@
         "category": "Geography"
     },
     {
-        "question": "Mount Kilimanjaro is located in which country?",
+        "text": "Mount Kilimanjaro is located in which country?",
         "answers": [
             "Tanzania",
             "Kenya",
@@ -351,7 +351,7 @@
         "category": "Geography"
     },
     {
-        "question": "Which river flows through the most countries?",
+        "text": "Which river flows through the most countries?",
         "answers": [
             "Nile",
             "Amazon",
@@ -365,7 +365,7 @@
         "category": "Geography"
     },
     {
-        "question": "Which African country has the highest number of bordering countries?",
+        "text": "Which African country has the highest number of bordering countries?",
         "answers": [
             "Sudan",
             "Democratic Republic of the Congo",
@@ -379,7 +379,7 @@
         "category": "Geography"
     },
     {
-        "question": "What is the center of an atom called?",
+        "text": "What is the center of an atom called?",
         "answers": [
             "Nucleus",
             "Electron",
@@ -393,7 +393,7 @@
         "category": "Sciences"
     },
     {
-        "question": "Which organ pumps blood throughout the human body?",
+        "text": "Which organ pumps blood throughout the human body?",
         "answers": [
             "Heart",
             "Lungs",
@@ -407,7 +407,7 @@
         "category": "Sciences"
     },
     {
-        "question": "What is the main gas responsible for the greenhouse effect on Earth?",
+        "text": "What is the main gas responsible for the greenhouse effect on Earth?",
         "answers": [
             "Carbon dioxide",
             "Oxygen",
@@ -421,7 +421,7 @@
         "category": "Sciences"
     },
     {
-        "question": "Which planet has the most moons?",
+        "text": "Which planet has the most moons?",
         "answers": [
             "Saturn",
             "Jupiter",
@@ -435,7 +435,7 @@
         "category": "Sciences"
     },
     {
-        "question": "What is the chemical symbol for gold?",
+        "text": "What is the chemical symbol for gold?",
         "answers": [
             "Au",
             "Ag",
@@ -449,7 +449,7 @@
         "category": "Sciences"
     },
     {
-        "question": "What is the pH value of pure water at 25°C?",
+        "text": "What is the pH value of pure water at 25°C?",
         "answers": [
             "7",
             "6",
@@ -463,7 +463,7 @@
         "category": "Sciences"
     },
     {
-        "question": "Which data structure allows insertion, deletion, and retrieval in O(1) time on average?",
+        "text": "Which data structure allows insertion, deletion, and retrieval in O(1) time on average?",
         "answers": [
             "Hash Table",
             "Binary Search Tree",
@@ -477,7 +477,7 @@
         "category": "Sciences"
     },
     {
-        "question": "Which type of electromagnetic radiation has the shortest wavelength?",
+        "text": "Which type of electromagnetic radiation has the shortest wavelength?",
         "answers": [
             "X-rays",
             "Ultraviolet",
@@ -491,7 +491,7 @@
         "category": "Sciences"
     },
     {
-        "question": "Which planet in our solar system has the fastest rotation period?",
+        "text": "Which planet in our solar system has the fastest rotation period?",
         "answers": [
             "Saturn",
             "Earth",

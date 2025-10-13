@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace live_trivia
 {
     public class GamePlayer
@@ -8,6 +10,8 @@ namespace live_trivia
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
         public virtual Player Player { get; set; } = null!;
+
+        [JsonIgnore]
         public virtual Game Game { get; set; } = null!;
     }
 }
