@@ -1,4 +1,4 @@
-using live_trivia.Data;
+using live_trivia.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace live_trivia.Controllers
@@ -7,32 +7,28 @@ namespace live_trivia.Controllers
     [Route("games")]
     public class GamesController : ControllerBase
     {
-        private readonly TriviaDbContext _context;
+        private readonly GamesRepository _repository;
 
-        public GamesController(TriviaDbContext context)
+        public GamesController(GamesRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpPost("{roomId}")]
         public async Task<IActionResult> CreateGame(string roomId)
         {
-            var game = new Game(roomId);
-            _context.Games.Add(game);
-            await _context.SaveChangesAsync();
+            var game = await _repository.CreateGameAsync(roomId);
             return Created($"/games/{roomId}", game);
         }
 
         [HttpPost("{roomId}/players")]
         public async Task<IActionResult> JoinGame(string roomId, [FromQuery] string playerName)
         {
-            var game = await _context.Games.FindAsync(roomId);
-            if (game == null) return NotFound("Game not found");
+            var game = await _repository.GetGameAsync(roomId);
+            if (game == null)
+                return NotFound("Game not found");
 
-            var player = new Player { Name = playerName };
-            game.AddPlayer(player);
-            await _context.SaveChangesAsync();
-
+            var player = await _repository.AddPlayerAsync(game, playerName);
             return Ok(player);
         }
     }
