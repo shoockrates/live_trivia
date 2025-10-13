@@ -12,5 +12,7 @@ namespace live_trivia
         public virtual Player Player { get; set; } = null!;
         public virtual Question Question { get; set; } = null!;
         public virtual Game Game { get; set; } = null!;
+
+        public bool IsCorrect { get; set; } = false; // update when processing the answer
     }
 }

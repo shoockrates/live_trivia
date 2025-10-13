@@ -56,9 +56,8 @@ if (app.Environment.IsDevelopment())
 // Redirect HTTP to HTTPS
 app.UseHttpsRedirection();
 
-// Map API controllers and root test route
+// Map API controllers
 app.MapControllers();
-app.MapGet("/", () => "Backend working!");
 
 // Run the app
 app.Run();
