@@ -78,8 +78,8 @@ public class AuthService : IAuthService
 
     private string GenerateJwtToken(User user)
     {
-        var jwtKey = _configuration["Jwt:Key"];
-        var jwtIssuer = _configuration["Jwt:Issuer"];
+        var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
+        var jwtIssuer = _configuration["Jwt:Issuer"] ?? "live-trivia-users";
         var jwtAudience = _configuration["Jwt:Audience"];
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
