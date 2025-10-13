@@ -1,72 +1,55 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using live_trivia.Data;
-using live_trivia;
+using live_trivia.Repositories;
 
 namespace LiveTriviaBackend.Controllers
 {
     [ApiController]
     [Route("questions")]
-
     public class QuestionsController : ControllerBase
     {
-        private readonly TriviaDbContext _context;
+        private readonly QuestionsRepository _repository;
 
-        public QuestionsController(TriviaDbContext context)
+        public QuestionsController(QuestionsRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllQuestions()
         {
-            var questions = await _context.Questions.ToListAsync();
+            var questions = await _repository.GetAllAsync();
             return Ok(questions);
         }
 
         [HttpGet("random")]
         public async Task<IActionResult> GetRandom()
         {
-            var count = await _context.Questions.CountAsync();
-            if (count == 0) return NotFound("No questions available.");
-
-            var rand = new Random(); // consider making Random static to avoid repeated seed problems
-            var index = rand.Next(count);
-
-            var question = await _context.Questions.Skip(index).FirstOrDefaultAsync();
-            if (question == null) return NotFound();
-
+            var question = await _repository.GetRandomAsync();
+            if (question == null) return NotFound("No questions available.");
             return Ok(question);
         }
-
 
         [HttpGet("category/{category}")]
         public async Task<IActionResult> GetByCategory(string category)
         {
-            var questions = await _context.Questions
-                .Where(q => EF.Functions.ILike(q.Category, category)) // Postgres ILIKE
-                .ToListAsync();
+            var questions = await _repository.GetByCategoryAsync(category);
             return Ok(questions);
         }
 
         [HttpPost("load/{file}")]
         public async Task<IActionResult> LoadFromFile(string file)
         {
-            if (!System.IO.File.Exists(file))
-                return NotFound($"File {file} not found.");
-
-            var questionBank = new QuestionBank(file);
-            var newQuestions = questionBank.Questions
-                .Where(q => !_context.Questions.Any(e => e.Text == q.Text))
-                .ToList();
-
-            if (!newQuestions.Any())
-                return Ok("No new questions to add.");
-
-            _context.Questions.AddRange(newQuestions);
-            await _context.SaveChangesAsync();
-
-            return Ok($"{newQuestions.Count} questions loaded from {file}");
+            try
+            {
+                var addedCount = await _repository.LoadFromFileAsync(file);
+                if (addedCount == 0)
+                    return Ok("No new questions to add.");
+                return Ok($"{addedCount} questions loaded from {file}");
+            }
+            catch (FileNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
     }
 }
