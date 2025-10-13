@@ -94,9 +94,9 @@ public class Game : BaseEntity
 
             if (playerAnswer != null)
             {
-                playerAnswer.isCorrect= question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
+                playerAnswer.IsCorrect= question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
                                  playerAnswer.SelectedAnswerIndexes.All(i => question.CorrectAnswerIndexes.Contains(i));
-                if (playerAnswer.isCorrect)
+                if (playerAnswer.IsCorrect)
                 {
                     switch (question.Difficulty.ToLower())
                     {
