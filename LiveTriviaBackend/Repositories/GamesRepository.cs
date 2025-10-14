@@ -35,5 +35,10 @@ namespace live_trivia.Repositories
             await _context.SaveChangesAsync();
             return player;
         }
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync(); // Only needed if using EF Core or similar
+        }
+
     }
 }
