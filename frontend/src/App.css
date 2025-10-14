@@ -66,7 +66,7 @@
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
-  transition: transform 320ms ease, box-shadow 320ms ease, background-color 320ms ease, opacity 320ms ease, border-color 320ms ease;
+  transition: transform 420ms ease, box-shadow 420ms ease, background-color 420ms ease, opacity 420ms ease, border-color 420ms ease, filter 500ms ease;
 }
 
 .TriviaButton.gradient {
@@ -77,10 +77,9 @@
 }
 
 .TriviaButton:hover {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 14px 24px rgba(156, 200, 255, 0.15);
-  background-color: rgba(156, 200, 255, 0.08);
-  border-color: rgba(156, 200, 255, 0.35);
+  transform: translateY(-2px) scale(1.02);
+  filter: brightness(0.75);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
 }
 
 .TriviaButton:active {
@@ -96,7 +95,7 @@
 }
 
 .CategoryTitle {
-  margin: -6px 0 16px 0; /* lift title up and add more spacing below */
+  margin: -6px 0 16px 0;
   font-size: clamp(32px, 6vw, 64px);
   line-height: 1.1;
   letter-spacing: 0.5px;
@@ -133,16 +132,15 @@
   backdrop-filter: blur(4px);
 }
 
-/* Question card + text spacing */
 .QuestionCard {
   width: 100%;
   max-width: 760px;
 }
+
 .QuestionText {
   margin-bottom: 14px;
 }
 
-/* Answers arranged in a natural 2x2 layout */
 .AnswersGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(200px, 1fr));
@@ -150,7 +148,6 @@
   justify-items: stretch;
 }
 
-/* Slight offsets for a more organic look */
 .AnswersGrid .btn-green { transform: translateY(0); }
 .AnswersGrid .btn-blue { transform: translateY(2px); }
 .AnswersGrid .btn-red { transform: translateY(-1px); }
@@ -161,26 +158,55 @@
   cursor: not-allowed;
 }
 
-/* Color themes for the four buttons */
 .btn-green {
   background-color: #2ecc71;
   color: #ffffff;
   border: none;
+  text-shadow: 0 0 0 transparent;
 }
+
 .btn-blue {
   background-color: #3498db;
   color: #ffffff;
   border: none;
 }
+
 .btn-red {
   background-color: #e74c3c;
   color: #ffffff;
   border: none;
 }
+
 .btn-yellow {
   background-color: #f1c40f;
-  color: #1f2a37;
+  color: #ffffff;
   border: none;
+}
+
+.TriviaButton.answer-correct {
+  background-color: #12ff79;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(18, 255, 121, 0.95) inset, 0 0 28px rgba(18, 255, 121, 0.55);
+  text-shadow: 0 0 10px rgba(10, 40, 20, 0.25);
+  transform: translateY(-1px) scale(1.04);
+}
+
+.TriviaButton.answer-selected-incorrect {
+  background-color: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.9) inset, 0 0 18px rgba(239, 68, 68, 0.28);
+}
+
+.TriviaButton.answer-incorrect {
+  filter: grayscale(90%) saturate(0.2) brightness(0.8);
+  opacity: 0.65;
+  color: #eaf2f8;
+}
+
+.TriviaButton.answer-correct,
+.TriviaButton.answer-selected-incorrect,
+.TriviaButton.answer-incorrect {
+  cursor: default;
 }
 
 .BackButton {
@@ -196,12 +222,11 @@
 }
 
 .BackButton:hover {
-  background-color: rgba(156, 200, 255, 0.08);
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 10px 20px rgba(156, 200, 255, 0.12);
+  background-color: rgba(156, 200, 255, 0.03);
+  transform: translateY(-0.25px) scale(1.003);
+  box-shadow: 0 6px 12px rgba(156, 200, 255, 0.08);
 }
 
-/* Enlarge/Shrink stages */
 .growIn { animation: growIn 520ms ease both; }
 .shrinkOut { animation: shrinkOut 400ms ease both; }
 
