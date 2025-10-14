@@ -1,4 +1,4 @@
 bin/
 obj/
 LiveTriviaBackend/appsettings.json
-
+.DS_Store

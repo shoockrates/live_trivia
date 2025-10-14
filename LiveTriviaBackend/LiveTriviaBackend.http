@@ -1,6 +1,0 @@
-@LiveTriviaBackend_HostAddress = http://localhost:5216
-
-GET {{LiveTriviaBackend_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

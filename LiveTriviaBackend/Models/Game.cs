@@ -94,11 +94,11 @@ public class Game : BaseEntity
 
             if (playerAnswer != null)
             {
-                bool isCorrect = question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
+                playerAnswer.IsCorrect= question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
                                  playerAnswer.SelectedAnswerIndexes.All(i => question.CorrectAnswerIndexes.Contains(i));
-                if (isCorrect)
+                if (playerAnswer.IsCorrect)
                 {
-                    switch (question.Difficulty)
+                    switch (question.Difficulty.ToLower())
                     {
                         case "easy":
                             player.Score += 1;

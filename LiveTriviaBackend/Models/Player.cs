@@ -31,4 +31,24 @@ public class Player : BaseEntity, IComparable<Player>
         if (other == null) return 1;
         return other.Score.CompareTo(this.Score);
     }
+
+    public ScoreSummary GetScoreSummary()
+    {
+        int correctAnswers = PlayerAnswers.Count(pa => pa.IsCorrect); // assume PlayerAnswer has IsCorrect property
+        int totalScore = Score; // current total score
+        return new ScoreSummary(correctAnswers, totalScore);
+    }
+}
+
+public struct ScoreSummary
+{
+    public int CorrectAnswers { get; set; }
+    public int TotalScore { get; set; }
+
+    public ScoreSummary(int correctAnswers, int totalScore)
+    {
+        CorrectAnswers = correctAnswers;
+        TotalScore = totalScore;
+    }
+    public override string ToString() => $"Correct: {CorrectAnswers}, Score: {TotalScore}";
 }
