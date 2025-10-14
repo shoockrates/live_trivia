@@ -14,6 +14,7 @@ namespace live_trivia.Data
         public DbSet<Question> Questions { get; set; }
         public DbSet<GamePlayer> GamePlayers { get; set; }
         public DbSet<PlayerAnswer> PlayerAnswers { get; set; }
+        public DbSet<User> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -161,6 +162,24 @@ namespace live_trivia.Data
                         j.Property("GameRoomId").HasMaxLength(50);
                         j.HasKey("GameRoomId", "QuestionId");
                     });
+
+            // Configure User table
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(u => u.Id);
+                entity.Property(u => u.Id).ValueGeneratedOnAdd();
+                entity.Property(u => u.Username).HasMaxLength(100).IsRequired();
+                entity.Property(u => u.PasswordHash).IsRequired();
+                entity.Property(u => u.CreatedAt).IsRequired();
+                entity.Property(u => u.UpdatedAt);
+
+                entity.HasIndex(u => u.Username).IsUnique();
+
+                entity.HasOne(u => u.Player)
+                     .WithMany()
+                     .HasForeignKey(u => u.PlayerId)
+                     .OnDelete(DeleteBehavior.SetNull);
+            });
         }
     }
 }
