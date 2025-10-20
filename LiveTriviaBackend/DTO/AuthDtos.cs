@@ -1,18 +1,18 @@
 namespace live_trivia;
 
-public class RegisterRequest
+public record RegisterRequest
 {
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 }
 
-public class LoginRequest
+public record LoginRequest
 {
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 }
 
-public class AuthResponse
+public record AuthResponse
 {
     public string Token { get; set; } = string.Empty;
     public string Username { get; set; } = string.Empty;
