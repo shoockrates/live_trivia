@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './App.css';
+import Login from './components/Login';
+import Register from './components/Register';
+import UserDropdown from './components/UserDropdown';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -18,12 +21,81 @@ function App() {
   const [gameFinished, setGameFinished] = useState(false);
   const [questionIn, setQuestionIn] = useState(false);
   const [resultsIn, setResultsIn] = useState(false);
+  
+  // Authentication states
+  const [currentView, setCurrentView] = useState('auth');
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Backend base URL
   const API_BASE = useMemo(() => 'http://localhost:5216', []);
 
+  // Check if user is already logged in on app start
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const playerId = localStorage.getItem('playerId');
+
+    if (token && username) {
+      setUser({ username, playerId, token });
+      setIsAuthenticated(true);
+      setCurrentView('game');
+    }
+  }, []);
+
+  // Add authentication header to all fetch requests
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const [url, options = {}] = args;
+      const token = localStorage.getItem('token');
+      
+      if (token && url.startsWith(API_BASE)) {
+        options.headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${token}`
+        };
+      }
+      
+      return originalFetch(url, options);
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [API_BASE]);
+
+  // Authentication handlers
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+    setCurrentView('game');
+  };
+
+  const handleRegister = (userData) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+    setCurrentView('game');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('playerId');
+    setUser(null);
+    setIsAuthenticated(false);
+    setCurrentView('auth');
+    setSelectedCategory(null);
+  };
+
+  const showLogin = () => setCurrentView('login');
+  const showRegister = () => setCurrentView('register');
+  const showAuth = () => setCurrentView('auth');
+
   // Load all questions once to derive categories
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const controller = new AbortController();
     const load = async () => {
       try {
@@ -45,11 +117,10 @@ function App() {
     };
     load();
     return () => controller.abort();
-  }, [API_BASE]);
+  }, [API_BASE, isAuthenticated]);
 
   const handleSelect = (category) => {
     setSelectedCategory(category);
-    // fetch questions for the selected category
     setLoading(true);
     setError(null);
     setCurrentIndex(0);
@@ -60,6 +131,7 @@ function App() {
     setGameFinished(false);
     setGameEndedAt(null);
     setGameStartedAt(Date.now());
+    
     fetch(`${API_BASE}/questions/category/${encodeURIComponent(category)}`)
       .then(r => {
         if (!r.ok) throw new Error(`Failed to load ${category} (${r.status})`);
@@ -80,7 +152,6 @@ function App() {
   };
 
   const handleBack = () => {
-    // small delay to allow shrink animation before unmount
     setIsAnimatingBack(true);
     setTimeout(() => {
       setSelectedCategory(null);
@@ -116,7 +187,7 @@ function App() {
   }, [gameFinished]);
 
   const selectAnswer = (idx) => {
-    if (revealed) return; // prevent re-answering
+    if (revealed) return;
     setSelectedAnswerIndex(idx);
     const isCorrect = correctIdxs.includes(idx);
     if (isCorrect) {
@@ -169,13 +240,70 @@ function App() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Render authentication views
+  if (!isAuthenticated) {
+    return (
+      <div className="App">
+        {currentView === 'auth' && (
+          <div className="TriviaContainer">
+            <div className="HeroCard">
+              <h1 className="HeroTitle">Live Trivia</h1>
+              <p className="HeroSubtitle">Test your knowledge and challenge friends</p>
+              <div className="ButtonsGrid">
+                <button 
+                  className="TriviaButton gradient" 
+                  onClick={showLogin}
+                >
+                  Sign In
+                </button>
+                <button 
+                  className="TriviaButton" 
+                  onClick={showRegister}
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {currentView === 'login' && (
+          <Login 
+            onLogin={handleLogin}
+            onSwitchToRegister={showRegister}
+          />
+        )}
+        
+        {currentView === 'register' && (
+          <Register 
+            onRegister={handleRegister}
+            onSwitchToLogin={showLogin}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Render main game for authenticated users
   return (
     <div className="App">
       <div className="TriviaContainer">
+        {/* Logout button */}
+        <div style={{ 
+            position: 'absolute', 
+            top: '20px', 
+            right: '20px', 
+            zIndex: 1000 
+            }}>
+            <UserDropdown 
+                user={user} 
+                onLogout={handleLogout} 
+            />
+            </div>
+
         {!selectedCategory && (
           <div className="HeroCard">
             <h1 className="HeroTitle">Trivia Game</h1>
-            <p className="HeroSubtitle">Select a category to begin:</p>
             <div className="ButtonsGrid minimal">
               {categories.map((cat) => (
                 <button
