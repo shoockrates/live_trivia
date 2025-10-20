@@ -7,7 +7,7 @@
             "Roman Empire",
             "Persian Empire"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "easy",
@@ -21,7 +21,7 @@
             "Nikita Khrushchev",
             "Leon Trotsky"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "easy",
@@ -35,7 +35,7 @@
             "China",
             "United Kingdom"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -49,7 +49,7 @@
             "1939",
             "1950"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "medium",
@@ -63,7 +63,7 @@
             "1991",
             "1993"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "medium",
@@ -77,7 +77,7 @@
             "1799",
             "1804"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "medium",
@@ -91,7 +91,7 @@
             "Neville Chamberlain",
             "Clement Attlee"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             2
         ],
         "difficulty": "hard",
@@ -105,7 +105,7 @@
             "Aztec",
             "Iroquois"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "hard",
@@ -119,7 +119,7 @@
             "Maximilian I",
             "Otto I"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "hard",
@@ -133,7 +133,7 @@
             "Pablo Picasso",
             "Michelangelo"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -147,7 +147,7 @@
             "Jane Austen",
             "Mark Twain"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -161,7 +161,7 @@
             "Sophocles",
             "Plato"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -175,7 +175,7 @@
             "Edgar Degas",
             "Paul Cézanne"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "medium",
@@ -189,7 +189,7 @@
             "Athena",
             "Circe"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "medium",
@@ -203,7 +203,7 @@
             "Anna Karenina",
             "The Brothers Karamazov"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0,
             3
         ],
@@ -218,7 +218,7 @@
             "Johannes Vermeer",
             "Jan Steen"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             2
         ],
         "difficulty": "hard",
@@ -232,7 +232,7 @@
             "Titian",
             "Michelangelo"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             3
         ],
         "difficulty": "hard",
@@ -246,7 +246,7 @@
             "Pierre-Auguste Renoir",
             "Camille Pissarro"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "hard",
@@ -260,7 +260,7 @@
             "Alps",
             "Rockies"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -274,7 +274,7 @@
             "South America",
             "Africa"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             3
         ],
         "difficulty": "easy",
@@ -288,7 +288,7 @@
             "Stockholm",
             "Copenhagen"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "easy",
@@ -302,7 +302,7 @@
             "Mongolia",
             "Poland"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "medium",
@@ -316,8 +316,8 @@
             "Argentina",
             "Colombia"
         ],
-        "answerIndexes": [
-            2, 
+        "correctAnswerIndexes": [
+            2,
             3
         ],
         "difficulty": "medium",
@@ -331,7 +331,7 @@
             "Arctic Desert",
             "Gobi"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "medium",
@@ -345,7 +345,7 @@
             "Uganda",
             "Ethiopia"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "hard",
@@ -359,7 +359,7 @@
             "Danube",
             "Mekong"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             2
         ],
         "difficulty": "hard",
@@ -373,7 +373,7 @@
             "Chad",
             "Libya"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "hard",
@@ -387,7 +387,7 @@
             "Proton",
             "Neutron"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -401,7 +401,7 @@
             "Liver",
             "Kidneys"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -415,7 +415,7 @@
             "Nitrogen",
             "Methane"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "easy",
@@ -429,7 +429,7 @@
             "Uranus",
             "Neptune"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             1
         ],
         "difficulty": "medium",
@@ -443,7 +443,7 @@
             "Gd",
             "Go"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "medium",
@@ -457,7 +457,7 @@
             "8",
             "5"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "medium",
@@ -471,7 +471,7 @@
             "Linked List",
             "Heap"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             0
         ],
         "difficulty": "hard",
@@ -485,7 +485,7 @@
             "Gamma rays",
             "Visible light"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             2
         ],
         "difficulty": "hard",
@@ -499,7 +499,7 @@
             "Neptune",
             "Jupiter"
         ],
-        "answerIndexes": [
+        "correctAnswerIndexes": [
             3
         ],
         "difficulty": "hard",
