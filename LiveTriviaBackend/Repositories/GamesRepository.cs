@@ -28,12 +28,27 @@ namespace live_trivia.Repositories
                 .FirstOrDefaultAsync(g => g.RoomId == roomId);
         }
 
-        public async Task<Player> AddPlayerAsync(Game game, string playerName)
+        public async Task<Player?> GetPlayerByIdAsync(int playerId)
         {
-            var player = new Player { Name = playerName };
-            game.AddPlayer(player);
+            return await _context.Players
+                                 .FirstOrDefaultAsync(p => p.Id == playerId);
+        }
+
+        public async Task AddExistingPlayerToGameAsync(Game game, Player player)
+        {
+            if (game == null || player == null)
+            {
+                throw new ArgumentNullException("Game and Player must not be null.");
+            }
+
+            var gamePlayer = new GamePlayer
+            {
+                GameRoomId = game.RoomId,
+                PlayerId = player.Id,
+            };
+
+            _context.GamePlayers.Add(gamePlayer);
             await _context.SaveChangesAsync();
-            return player;
         }
         public async Task SaveChangesAsync()
         {
