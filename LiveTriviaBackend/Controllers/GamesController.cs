@@ -1,4 +1,5 @@
 using live_trivia.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace live_trivia.Controllers
@@ -15,6 +16,7 @@ namespace live_trivia.Controllers
         }
 
         [HttpPost("{roomId}")]
+        [Authorize]
         public async Task<IActionResult> CreateGame(string roomId)
         {
             var game = await _repository.CreateGameAsync(roomId);
@@ -22,6 +24,7 @@ namespace live_trivia.Controllers
         }
 
         [HttpPost("{roomId}/join")]
+        [Authorize]
         public async Task<IActionResult> JoinGame(string roomId, [FromQuery] string playerName)
         {
             var game = await _repository.GetGameAsync(roomId);
@@ -33,6 +36,7 @@ namespace live_trivia.Controllers
         }
 
         [HttpPost("{roomId}/answer")]
+        [Authorize]
         public async Task<IActionResult> SubmitAnswer(string roomId, [FromBody] AnswerRequest request)
         {
             var game = await _repository.GetGameAsync(roomId);
