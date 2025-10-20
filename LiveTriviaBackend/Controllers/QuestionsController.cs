@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using live_trivia.Repositories;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LiveTriviaBackend.Controllers
 {
@@ -36,6 +37,8 @@ namespace LiveTriviaBackend.Controllers
             return Ok(questions);
         }
 
+        // TODO: Perhaps restrict to admin users only
+        [Authorize]
         [HttpPost("load/{file}")]
         public async Task<IActionResult> LoadFromFile(string file)
         {
