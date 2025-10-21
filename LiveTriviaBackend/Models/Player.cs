@@ -43,16 +43,3 @@ public class Player : BaseEntity, IComparable<Player>
         return new ScoreSummary(correctAnswers, totalScore);
     }
 }
-
-public struct ScoreSummary
-{
-    public int CorrectAnswers { get; set; }
-    public int TotalScore { get; set; }
-
-    public ScoreSummary(int correctAnswers, int totalScore)
-    {
-        CorrectAnswers = correctAnswers;
-        TotalScore = totalScore;
-    }
-    public override string ToString() => $"Correct: {CorrectAnswers}, Score: {TotalScore}";
-}
