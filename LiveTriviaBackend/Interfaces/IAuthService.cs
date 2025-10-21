@@ -1,5 +1,4 @@
-
-namespace live_trivia.Services;
+namespace live_trivia.Interfaces;
 
 public interface IAuthService
 {
