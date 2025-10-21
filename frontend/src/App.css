@@ -7,6 +7,23 @@
     color: #eaf2f8;
     text-align: center;
     font-synthesis-weight: none;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.App::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .TriviaContainer {
@@ -19,15 +36,27 @@
     margin: 0 auto;
     max-width: 980px;
     position: relative;
-    background: linear-gradient(135deg, rgba(20, 28, 36, 0.35), rgba(10, 14, 19, 0.18));
+    background: linear-gradient(135deg, rgba(20, 28, 36, 0.4), rgba(10, 14, 19, 0.25));
     color: inherit;
-    border: 1px solid rgba(156, 200, 255, 0.08);
-    border-radius: 16px;
-    padding: 24px 20px 18px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 26px rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(8px) saturate(115%);
-    -webkit-backdrop-filter: blur(8px) saturate(115%);
+    border: 1px solid rgba(156, 200, 255, 0.12);
+    border-radius: 20px;
+    padding: 32px 28px 24px;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.06), 
+        0 12px 40px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(156, 200, 255, 0.05);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
     animation: fadeIn 700ms ease both;
+    transition: all 0.3s ease;
+}
+
+.HeroCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.08), 
+        0 16px 48px rgba(0, 0, 0, 0.4),
+        0 6px 20px rgba(156, 200, 255, 0.08);
 }
 
 .HeroTitle {
@@ -292,4 +321,133 @@
         transform: scale(1);
         opacity: 1;
     }
+}
+
+/* Enhanced button styles */
+.TriviaButton {
+    position: relative;
+    overflow: hidden;
+}
+
+.TriviaButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.TriviaButton:hover::before {
+    left: 100%;
+}
+
+/* Improved responsive design */
+@media (max-width: 768px) {
+    .TriviaContainer {
+        padding: 12px;
+    }
+    
+    .HeroCard {
+        padding: 24px 20px 20px;
+    }
+    
+    .ButtonsGrid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .TriviaButton {
+        padding: 14px 20px;
+        font-size: 16px;
+    }
+    
+    .AnswersGrid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .QuestionCard {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .HeroTitle {
+        font-size: 28px;
+    }
+    
+    .CategoryTitle {
+        font-size: 24px;
+    }
+    
+    .TriviaButton {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+}
+
+/* Loading animation */
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(156, 200, 255, 0.3);
+    border-top: 2px solid #6e7bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Enhanced focus states for accessibility */
+.TriviaButton:focus-visible,
+.BackButton:focus-visible {
+    outline: 2px solid #6e7bff;
+    outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+    transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+/* Loading and error containers */
+.loading-container,
+.error-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(156, 200, 255, 0.2);
+    border-top: 3px solid #6e7bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+.loading-container p,
+.error-container p {
+    color: #c9d7e6;
+    font-size: 16px;
+    margin: 0;
+}
+
+.error-container p {
+    color: #ff6b6b;
+    font-size: 18px;
+    font-weight: 500;
 }
