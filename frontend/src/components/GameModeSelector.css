@@ -1,0 +1,172 @@
+.game-mode-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.game-mode-card {
+  width: 100%;
+  max-width: 600px;
+  background: linear-gradient(135deg, rgba(20, 28, 36, 0.4), rgba(10, 14, 19, 0.25));
+  border: 1px solid rgba(156, 200, 255, 0.12);
+  border-radius: 20px;
+  padding: 40px 32px;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.06), 
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(156, 200, 255, 0.05);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  animation: fadeIn 700ms ease both;
+}
+
+.game-mode-title {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  text-align: center;
+  color: #eaf2f8;
+  background: linear-gradient(90deg, #9cc8ff, #a6ffe7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.game-mode-subtitle {
+  margin: 0 0 32px 0;
+  opacity: 0.75;
+  color: #c9d7e6;
+  text-align: center;
+  font-size: 16px;
+}
+
+.game-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.game-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(20, 28, 36, 0.3);
+  border: 1px solid rgba(156, 200, 255, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  color: #eaf2f8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.game-mode-option:hover {
+  background: rgba(20, 28, 36, 0.5);
+  border-color: rgba(156, 200, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.game-mode-option.single-player:hover {
+  border-color: rgba(46, 204, 113, 0.4);
+  box-shadow: 0 8px 24px rgba(46, 204, 113, 0.1);
+}
+
+.game-mode-option.multiplayer:hover {
+  border-color: rgba(110, 123, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(110, 123, 255, 0.1);
+}
+
+.mode-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.single-player .mode-icon {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.multiplayer .mode-icon {
+  background: linear-gradient(135deg, #6e7bff, #5a6fd8);
+}
+
+.mode-content {
+  flex: 1;
+}
+
+.mode-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #eaf2f8;
+}
+
+.mode-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #c9d7e6;
+  opacity: 0.8;
+  line-height: 1.4;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 28, 36, 0.4);
+  border: 1px solid rgba(156, 200, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 20px;
+  color: #c9d7e6;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.back-button:hover {
+  background: rgba(20, 28, 36, 0.6);
+  border-color: rgba(156, 200, 255, 0.4);
+  color: #eaf2f8;
+  transform: translateY(-1px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .game-mode-card {
+    padding: 32px 24px;
+  }
+  
+  .game-mode-option {
+    padding: 20px;
+    gap: 16px;
+  }
+  
+  .mode-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .mode-content h3 {
+    font-size: 18px;
+  }
+}
