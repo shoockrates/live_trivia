@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using live_trivia.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using live_trivia.Extensions;
 
 namespace LiveTriviaBackend.Controllers
 {
@@ -33,7 +34,7 @@ namespace LiveTriviaBackend.Controllers
         [HttpGet("category/{category}")]
         public async Task<IActionResult> GetByCategory(string category)
         {
-            var questions = await _repository.GetByCategoryAsync(category);
+            var questions = await _repository.GetByCategoryAsync(category.ToLower().CapitalizeFirstLetter());
             return Ok(questions);
         }
 

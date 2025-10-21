@@ -20,10 +20,14 @@ public class Player : BaseEntity, IComparable<Player>
         Score = 0;
     }
 
-
-    public void AddScore(int points)
+    // MODIFIED METHOD to include Optional and Named Arguments Requirement (4)
+    public void AddScore(int points, string reason = "Game Score Update", bool logChange = false)              // Optional argument
     {
         Score += points;
+        if (logChange)
+        {
+            Console.WriteLine($"Player {Name} (+{points} points). New Score: {Score}. Reason: {reason}");
+        }
     }
 
     public int CompareTo(Player? other)
