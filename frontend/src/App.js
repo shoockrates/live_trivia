@@ -459,6 +459,7 @@ function App() {
             loading={loading}
             error={error}
             user={user}
+            onBack={handleBackToGameMode}
           />
         )}
 

@@ -39,13 +39,6 @@ const GameModeSelector = ({ onSelectMode, onBack }) => {
             </div>
           </button>
         </div>
-
-        <button className="back-button" onClick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0L0 8l8 8V0z"/>
-          </svg>
-          Back
-        </button>
       </div>
     </div>
   );
