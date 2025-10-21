@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './UserDropdown.css';
 
-const UserDropdown = ({ user, onLogout }) => {
+const UserDropdown = ({ user, onLogout, onShowStats, onShowLeaderboard }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -44,6 +44,14 @@ const UserDropdown = ({ user, onLogout }) => {
   // Handle item clicks
   const handleItemClick = (action) => {
     console.log(`Clicked: ${action}`);
+    setIsOpen(false);
+    
+    if (action === 'statistics' && onShowStats) {
+      onShowStats();
+    } else if (action === 'history' && onShowLeaderboard) {
+      onShowLeaderboard();
+    }
+    // You can add navigation logic here for different menu items
   };
 
   return (
@@ -124,7 +132,7 @@ const UserDropdown = ({ user, onLogout }) => {
               <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 14c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6z"/>
               <path d="M8 4v4l3 2"/>
             </svg>
-            Game History
+            Leaderboard
           </button>
 
           <button 
