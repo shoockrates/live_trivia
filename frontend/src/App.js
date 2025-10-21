@@ -3,6 +3,14 @@ import './App.css';
 import Login from './components/Login';
 import Register from './components/Register';
 import UserDropdown from './components/UserDropdown';
+import GameModeSelector from './components/GameModeSelector';
+import MultiplayerLobby from './components/MultiplayerLobby';
+import GameRoom from './components/GameRoom';
+import PlayerStats from './components/PlayerStats';
+import Leaderboard from './components/Leaderboard';
+import CategorySelector from './components/CategorySelector';
+import QuestionDisplay from './components/QuestionDisplay';
+import GameResults from './components/GameResults';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -26,6 +34,13 @@ function App() {
   const [currentView, setCurrentView] = useState('auth');
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Game mode states
+  const [gameMode, setGameMode] = useState(null); // 'single' or 'multiplayer'
+  const [roomCode, setRoomCode] = useState(null);
+  const [currentGameRoom, setCurrentGameRoom] = useState(null);
+  const [showStats, setShowStats] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // Backend base URL
   const API_BASE = useMemo(() => 'http://localhost:5216', []);
@@ -39,7 +54,7 @@ function App() {
     if (token && username) {
       setUser({ username, playerId, token });
       setIsAuthenticated(true);
-      setCurrentView('game');
+      setCurrentView('game-mode');
     }
   }, []);
 
@@ -69,13 +84,13 @@ function App() {
   const handleLogin = (userData) => {
     setUser(userData);
     setIsAuthenticated(true);
-    setCurrentView('game');
+    setCurrentView('game-mode');
   };
 
   const handleRegister = (userData) => {
     setUser(userData);
     setIsAuthenticated(true);
-    setCurrentView('game');
+    setCurrentView('game-mode');
   };
 
   const handleLogout = () => {
@@ -86,11 +101,71 @@ function App() {
     setIsAuthenticated(false);
     setCurrentView('auth');
     setSelectedCategory(null);
+    setGameMode(null);
+    setRoomCode(null);
+    setCurrentGameRoom(null);
   };
 
   const showLogin = () => setCurrentView('login');
   const showRegister = () => setCurrentView('register');
   const showAuth = () => setCurrentView('auth');
+  
+  // Game mode handlers
+  const handleGameModeSelect = (mode) => {
+    setGameMode(mode);
+    if (mode === 'single') {
+      setCurrentView('game');
+    } else if (mode === 'multiplayer') {
+      setCurrentView('multiplayer-lobby');
+    }
+  };
+  
+  const handleBackToGameMode = () => {
+    setCurrentView('game-mode');
+    setGameMode(null);
+    setRoomCode(null);
+    setCurrentGameRoom(null);
+  };
+  
+  const handleCreateGame = (newRoomCode) => {
+    setRoomCode(newRoomCode);
+    setCurrentGameRoom({ roomCode: newRoomCode, isHost: true });
+    setCurrentView('game-room');
+  };
+  
+  const handleJoinGame = (joinedRoomCode) => {
+    setRoomCode(joinedRoomCode);
+    setCurrentGameRoom({ roomCode: joinedRoomCode, isHost: false });
+    setCurrentView('game-room');
+  };
+  
+  const handleBackToLobby = () => {
+    setCurrentView('multiplayer-lobby');
+    setRoomCode(null);
+    setCurrentGameRoom(null);
+  };
+  
+  const handleStartMultiplayerGame = (category) => {
+    setSelectedCategory(category);
+    setCurrentView('game');
+    // Here you would typically start the multiplayer game
+  };
+  
+  const handleShowStats = () => {
+    setShowStats(true);
+  };
+  
+  const handleBackFromStats = () => {
+    setShowStats(false);
+  };
+  
+  const handleShowLeaderboard = () => {
+    setShowLeaderboard(true);
+  };
+  
+  const handleBackFromLeaderboard = () => {
+    setShowLeaderboard(false);
+  };
 
   // Load all questions once to derive categories
   useEffect(() => {
@@ -284,6 +359,82 @@ function App() {
     );
   }
 
+  // Render player statistics
+  if (showStats) {
+    return (
+      <div className="App">
+        <PlayerStats 
+          user={user}
+          onBack={handleBackFromStats}
+        />
+      </div>
+    );
+  }
+
+  // Render leaderboard
+  if (showLeaderboard) {
+    return (
+      <div className="App">
+        <Leaderboard 
+          onBack={handleBackFromLeaderboard}
+        />
+      </div>
+    );
+  }
+
+  // Render game mode selector
+  if (currentView === 'game-mode') {
+    return (
+      <div className="App">
+        <div style={{ 
+          position: 'absolute', 
+          top: '20px', 
+          right: '20px', 
+          zIndex: 1000 
+        }}>
+          <UserDropdown 
+            user={user} 
+            onLogout={handleLogout}
+            onShowStats={handleShowStats}
+            onShowLeaderboard={handleShowLeaderboard}
+          />
+        </div>
+        <GameModeSelector 
+          onSelectMode={handleGameModeSelect}
+          onBack={handleLogout}
+        />
+      </div>
+    );
+  }
+
+  // Render multiplayer lobby
+  if (currentView === 'multiplayer-lobby') {
+    return (
+      <div className="App">
+        <MultiplayerLobby 
+          onBack={handleBackToGameMode}
+          onCreateGame={handleCreateGame}
+          onJoinGame={handleJoinGame}
+          user={user}
+        />
+      </div>
+    );
+  }
+
+  // Render game room
+  if (currentView === 'game-room') {
+    return (
+      <div className="App">
+        <GameRoom 
+          roomCode={roomCode}
+          user={user}
+          onBack={handleBackToLobby}
+          onStartGame={handleStartMultiplayerGame}
+        />
+      </div>
+    );
+  }
+
   // Render main game for authenticated users
   return (
     <div className="App">
@@ -302,164 +453,60 @@ function App() {
             </div>
 
         {!selectedCategory && (
-          <div className="HeroCard">
-            <h1 className="HeroTitle">Trivia Game</h1>
-            <div className="ButtonsGrid minimal">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  className="TriviaButton minimal gradient"
-                  onClick={() => handleSelect(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            {error && (
-              <p className="Hint" style={{ color: '#ff6b6b' }}>{error}</p>
-            )}
-          </div>
+          <CategorySelector 
+            categories={categories}
+            onSelectCategory={handleSelect}
+            loading={loading}
+            error={error}
+            user={user}
+          />
         )}
 
         {selectedCategory && (
-          <div className={`SelectionStage ${isAnimatingBack ? 'shrinkOut' : 'growIn'}`}>
-            <h1 className="CategoryTitle minimalTitle">{selectedCategory}</h1>
+          <>
             {loading && (
-              <div className="QuestionPlaceholder minimalCard">
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
                 <p>Loading questions…</p>
               </div>
             )}
             {!loading && error && (
-              <div className="QuestionPlaceholder minimalCard">
+              <div className="error-container">
                 <p style={{ color: '#ff6b6b' }}>{error}</p>
               </div>
             )}
             {!loading && !error && questions.length === 0 && (
-              <div className="QuestionPlaceholder minimalCard">
+              <div className="error-container">
                 <p>No questions found for "{selectedCategory}".</p>
               </div>
             )}
             {!loading && !error && questions.length > 0 && !gameFinished && (
-              <div
-                className="QuestionCard minimalCard"
-                style={{
-                  opacity: questionIn ? 1 : 0,
-                  transform: questionIn ? 'scale(1)' : 'scale(0.98)',
-                  transition: 'opacity 360ms ease, transform 360ms ease'
-                }}
-              >
-                {(() => {
-                  const colors = [
-                    { name: 'green', color: '#2ecc71' },
-                    { name: 'blue', color: '#3498db' },
-                    { name: 'red', color: '#e74c3c' },
-                    { name: 'yellow', color: '#f1c40f' }
-                  ];
-                  const progressPct = ((currentIndex + (revealed ? 1 : 0)) / questions.length) * 100;
-                  return (
-                    <>
-                      <div className="QuestionText" style={{ marginBottom: 12, fontSize: 20, fontWeight: 600 }}>
-                        {questionText}
-                      </div>
-                      <div className="AnswersGrid">
-                        {colors.map((c, idx) => {
-                          const exists = Boolean(answers[idx]);
-                          const isSelected = selectedAnswerIndex === idx;
-                          const isCorrect = correctIdxs.includes(idx);
-                          const stateClass = revealed
-                            ? (isCorrect
-                                ? 'answer-correct'
-                                : (isSelected ? 'answer-selected-incorrect' : 'answer-incorrect'))
-                            : '';
-                          const animStyle = {
-                            opacity: questionIn ? 1 : 0,
-                            transform: questionIn ? 'translateY(0) scale(1)' : 'translateY(6px) scale(0.98)',
-                            transition: 'opacity 420ms ease, transform 420ms ease, background 420ms ease, box-shadow 420ms ease, color 420ms ease, filter 500ms ease',
-                            transitionDelay: `${idx * 60}ms`
-                          };
-                          return (
-                            <button
-                              key={c.name}
-                              className={`TriviaButton minimal btn-${c.name} ${stateClass}`}
-                              disabled={!exists || revealed}
-                              onClick={() => selectAnswer(idx)}
-                              aria-label={`Answer ${idx + 1}`}
-                              style={{ ...animStyle }}
-                            >
-                              {answers[idx] || '—'}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div style={{ marginTop: 12 }}>
-                        <div className="minimalCard" style={{ height: 6, padding: 0 }}>
-                          <div style={{ width: `${progressPct}%`, height: 6, background: '#3498db', transition: 'width 300ms ease' }} />
-                        </div>
-                      </div>
-                      <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="Hint">{currentIndex + 1} / {questions.length}</span>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <span className="Hint" style={{ color: '#2ecc71' }}>✔ {correctCount}</span>
-                          <span className="Hint" style={{ color: '#e74c3c' }}>✖ {wrongCount}</span>
-                        </div>
-                        <button
-                          className="BackButton"
-                          onClick={goNext}
-                          disabled={!revealed}
-                        >
-                          {currentIndex >= questions.length - 1 ? 'Finish' : 'Next'}
-                        </button>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
+              <QuestionDisplay
+                question={questionText}
+                answers={answers}
+                correctIndexes={correctIdxs}
+                onAnswerSelect={selectAnswer}
+                onNext={goNext}
+                currentIndex={currentIndex}
+                totalQuestions={questions.length}
+                correctCount={correctCount}
+                wrongCount={wrongCount}
+                revealed={revealed}
+                questionIn={questionIn}
+              />
             )}
             {!loading && !error && questions.length > 0 && gameFinished && (
-              <div
-                className="QuestionCard minimalCard"
-                style={{
-                  opacity: resultsIn ? 1 : 0,
-                  transform: resultsIn ? 'scale(1)' : 'scale(0.98)',
-                  transition: 'opacity 360ms ease, transform 360ms ease'
-                }}
-              >
-                <div className="QuestionText" style={{ marginBottom: 12, fontSize: 22, fontWeight: 700 }}>
-                  Results
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                  <div className="minimalCard" style={{ padding: 12 }}>
-                    <div className="Hint">Correct</div>
-                    <div style={{ fontSize: 24, color: '#2ecc71', fontWeight: 700 }}>{correctCount}</div>
-                  </div>
-                  <div className="minimalCard" style={{ padding: 12 }}>
-                    <div className="Hint">Wrong</div>
-                    <div style={{ fontSize: 24, color: '#e74c3c', fontWeight: 700 }}>{wrongCount}</div>
-                  </div>
-                  <div className="minimalCard" style={{ padding: 12 }}>
-                    <div className="Hint">Percent</div>
-                    <div style={{ fontSize: 24, fontWeight: 700 }}>{percent}%</div>
-                  </div>
-                  <div className="minimalCard" style={{ padding: 12 }}>
-                    <div className="Hint">Time</div>
-                    <div style={{ fontSize: 24, fontWeight: 700 }}>{formatDuration(gameDurationMs)}</div>
-                  </div>
-                </div>
-                <div className="minimalCard" style={{ padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 28, fontWeight: 800 }}>
-                    Grade: <span style={{ color: percent >= 60 ? '#2ecc71' : '#e74c3c' }}>{getGrade(percent, wrongCount)}</span>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
-                  <button className="BackButton" onClick={handleBack}>Back</button>
-                  <button className="BackButton" onClick={restartGame}>Play again</button>
-                </div>
-              </div>
+              <GameResults
+                correctCount={correctCount}
+                wrongCount={wrongCount}
+                totalQuestions={questions.length}
+                gameDuration={gameDurationMs}
+                onPlayAgain={restartGame}
+                onBackToCategories={handleBack}
+                category={selectedCategory}
+              />
             )}
-            <button className="BackButton" onClick={handleBack} aria-label="Back to categories">
-              Back
-            </button>
-          </div>
+          </>
         )}
       </div>
     </div>
