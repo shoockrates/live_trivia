@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './CategorySelector.css';
 
-const CategorySelector = ({ categories, onSelectCategory, loading, error, user }) => {
+const CategorySelector = ({ categories, onSelectCategory, loading, error, user, onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCategories, setFilteredCategories] = useState(categories);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -35,6 +35,7 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user }
       'Music': '🎵',
       'Literature': '📖',
       'Art': '🎨',
+      'Arts & Literature': '🎭',
       'Technology': '💻',
       'Mathematics': '🔢',
       'Biology': '🧬',
@@ -46,7 +47,8 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user }
       'Travel': '✈️',
       'Nature': '🌿',
       'Animals': '🐾',
-      'Space': '🚀'
+      'Space': '🚀',
+      'Sciences': '🔬'
     };
     return icons[category] || '🧠';
   };
@@ -61,6 +63,7 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user }
       'Music': '#e91e63',
       'Literature': '#795548',
       'Art': '#ff9800',
+      'Arts & Literature': '#e91e63',
       'Technology': '#607d8b',
       'Mathematics': '#3f51b5',
       'Biology': '#4caf50',
@@ -72,7 +75,8 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user }
       'Travel': '#00bcd4',
       'Nature': '#8bc34a',
       'Animals': '#ffc107',
-      'Space': '#2196f3'
+      'Space': '#2196f3',
+      'Sciences': '#e74c3c'
     };
     return colors[category] || '#6e7bff';
   };
@@ -81,6 +85,14 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user }
     <div className="category-selector-container">
       <div className="category-selector-card">
         <div className="selector-header">
+          <div className="header-top">
+            <button className="back-button" onClick={onBack}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0L0 8l8 8V0z"/>
+              </svg>
+              Back
+            </button>
+          </div>
           <h1 className="selector-title">Choose Your Challenge</h1>
           <p className="selector-subtitle">Select a category to test your knowledge</p>
           
