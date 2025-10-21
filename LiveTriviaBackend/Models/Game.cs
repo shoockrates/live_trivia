@@ -118,5 +118,3 @@ public class Game : BaseEntity
     }
 }
 
-public enum GameState { WaitingForPlayers, InProgress, Finished }
-

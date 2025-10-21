@@ -7,12 +7,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace live_trivia.Services;
 
-public interface IAuthService
-{
-    Task<AuthResponse> LoginAsync(LoginRequest loginRequest);
-    Task<AuthResponse> RegisterAsync(RegisterRequest registerRequest);
-}
-
 public class AuthService : IAuthService
 {
     private readonly TriviaDbContext _context;
