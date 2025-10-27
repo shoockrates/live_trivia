@@ -1,6 +1,6 @@
-using live_trivia.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using live_trivia.Interfaces;
 
 namespace live_trivia.Controllers
 {

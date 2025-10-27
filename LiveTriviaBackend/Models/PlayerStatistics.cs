@@ -12,12 +12,10 @@ public class PlayerStatistics : BaseEntity
     public int TotalScore { get; set; }
     public int BestScore { get; set; }
 
-    // Category-specific stats (store as JSON or separate table)
-    public string CategoryStatsJson { get; set; } = "{}";
-
     // Time-based stats
     public DateTime? LastPlayedAt { get; set; }
 
     // Relationships
     public virtual Player Player { get; set; } = null!;
+    public virtual ICollection<CategoryStatistics> CategoryStatistics { get; set; } = new List<CategoryStatistics>();
 }

@@ -15,6 +15,7 @@ namespace live_trivia.Data
         public DbSet<PlayerAnswer> PlayerAnswers { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<PlayerStatistics> PlayerStatistics { get; set; }
+        public DbSet<CategoryStatistics> CategoryStatistics { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -194,6 +195,23 @@ namespace live_trivia.Data
                 entity.HasOne(ps => ps.Player)
                     .WithOne()
                     .HasForeignKey<PlayerStatistics>(ps => ps.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure CategoryStatistics table
+            modelBuilder.Entity<CategoryStatistics>(entity =>
+            {
+                entity.HasKey(cs => cs.Id);
+                entity.Property(cs => cs.Id).ValueGeneratedOnAdd();
+                entity.Property(cs => cs.Category).IsRequired().HasMaxLength(50);
+
+                // Index for performance
+                entity.HasIndex(cs => new { cs.PlayerStatisticsId, cs.Category }).IsUnique();
+
+                // Relationship
+                entity.HasOne(cs => cs.PlayerStatistics)
+                    .WithMany(ps => ps.CategoryStatistics)
+                    .HasForeignKey(cs => cs.PlayerStatisticsId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

@@ -1,17 +1,10 @@
-using System.Text.Json;
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
 using live_trivia.Records;
+using live_trivia.Interfaces;
 
 namespace live_trivia.Services
 {
-    public interface IStatisticsService
-    {
-        Task UpdateGameStatisticsAsync(int playerId, string category, int score, int correctAnswers, int totalQuestions);
-        Task<PlayerStatsResponse> GetPlayerStatisticsAsync(int playerId);
-        Task InitializePlayerStatisticsAsync(int playerId);
-    }
-
     public class StatisticsService : IStatisticsService
     {
         private readonly TriviaDbContext _context;
@@ -36,7 +29,6 @@ namespace live_trivia.Services
                     TotalCorrectAnswers = 0,
                     TotalScore = 0,
                     BestScore = 0,
-                    CategoryStatsJson = "{}",
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -47,15 +39,23 @@ namespace live_trivia.Services
 
         public async Task UpdateGameStatisticsAsync(int playerId, string category, int score, int correctAnswers, int totalQuestions)
         {
+            Console.WriteLine($"=== UPDATE STATS CALLED ===");
+            Console.WriteLine($"PlayerId: {playerId}, Category: {category}, Score: {score}, Correct: {correctAnswers}, Total: {totalQuestions}");
+
             var stats = await _context.PlayerStatistics
+                .Include(ps => ps.CategoryStatistics)
                 .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
 
             if (stats == null)
             {
+                Console.WriteLine("No stats found, initializing...");
                 await InitializePlayerStatisticsAsync(playerId);
                 stats = await _context.PlayerStatistics
+                    .Include(ps => ps.CategoryStatistics)
                     .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
             }
+
+            Console.WriteLine($"Before update - Games: {stats.TotalGamesPlayed}, Score: {stats.TotalScore}");
 
             // Update overall statistics
             stats.TotalGamesPlayed++;
@@ -69,58 +69,70 @@ namespace live_trivia.Services
             stats.LastPlayedAt = DateTime.UtcNow;
             stats.UpdatedAt = DateTime.UtcNow;
 
+            Console.WriteLine($"After update - Games: {stats.TotalGamesPlayed}, Score: {stats.TotalScore}");
+
             // Update category-specific statistics
             await UpdateCategoryStatisticsAsync(stats, category, correctAnswers, totalQuestions);
 
             await _context.SaveChangesAsync();
+            Console.WriteLine("Statistics saved successfully!");
         }
 
         private async Task UpdateCategoryStatisticsAsync(PlayerStatistics stats, string category, int correctAnswers, int totalQuestions)
         {
-            var categoryStats = string.IsNullOrEmpty(stats.CategoryStatsJson)
-                ? new Dictionary<string, CategoryStat>()
-                : JsonSerializer.Deserialize<Dictionary<string, CategoryStat>>(stats.CategoryStatsJson) ?? new Dictionary<string, CategoryStat>();
+            var categoryStat = stats.CategoryStatistics
+                .FirstOrDefault(cs => cs.Category == category);
 
-            if (categoryStats.ContainsKey(category))
+            if (categoryStat != null)
             {
-                var existing = categoryStats[category];
-                existing.GamesPlayed++;
-                existing.CorrectAnswers += correctAnswers;
-                existing.TotalQuestions += totalQuestions;
-                existing.Accuracy = existing.TotalQuestions > 0 ?
-                    Math.Round((double)existing.CorrectAnswers / existing.TotalQuestions * 100, 2) : 0;
+                categoryStat.GamesPlayed++;
+                categoryStat.CorrectAnswers += correctAnswers;
+                categoryStat.TotalQuestions += totalQuestions;
+                categoryStat.Accuracy = categoryStat.TotalQuestions > 0 ?
+                    Math.Round((double)categoryStat.CorrectAnswers / categoryStat.TotalQuestions * 100, 2) : 0;
+                categoryStat.UpdatedAt = DateTime.UtcNow;
             }
             else
             {
-                categoryStats[category] = new CategoryStat
+                categoryStat = new CategoryStatistics
                 {
+                    PlayerStatisticsId = stats.Id,
                     Category = category,
                     GamesPlayed = 1,
                     CorrectAnswers = correctAnswers,
                     TotalQuestions = totalQuestions,
-                    Accuracy = totalQuestions > 0 ? Math.Round((double)correctAnswers / totalQuestions * 100, 2) : 0
+                    Accuracy = totalQuestions > 0 ? Math.Round((double)correctAnswers / totalQuestions * 100, 2) : 0,
+                    CreatedAt = DateTime.UtcNow
                 };
+                _context.CategoryStatistics.Add(categoryStat);
             }
-
-            stats.CategoryStatsJson = JsonSerializer.Serialize(categoryStats);
         }
 
         public async Task<PlayerStatsResponse> GetPlayerStatisticsAsync(int playerId)
         {
             var stats = await _context.PlayerStatistics
+                .Include(ps => ps.CategoryStatistics)
                 .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
 
             if (stats == null)
             {
                 await InitializePlayerStatisticsAsync(playerId);
                 stats = await _context.PlayerStatistics
+                    .Include(ps => ps.CategoryStatistics)
                     .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
             }
 
-            var categoryStats = string.IsNullOrEmpty(stats.CategoryStatsJson)
-                ? new List<CategoryStat>()
-                : JsonSerializer.Deserialize<Dictionary<string, CategoryStat>>(stats.CategoryStatsJson)?
-                      .Values.OrderByDescending(cs => cs.GamesPlayed).ToList() ?? new List<CategoryStat>();
+            var categoryStats = stats.CategoryStatistics
+                .OrderByDescending(cs => cs.GamesPlayed)
+                .Select(cs => new CategoryStat
+                {
+                    Category = cs.Category,
+                    GamesPlayed = cs.GamesPlayed,
+                    CorrectAnswers = cs.CorrectAnswers,
+                    TotalQuestions = cs.TotalQuestions,
+                    Accuracy = cs.Accuracy
+                })
+                .ToList();
 
             return new PlayerStatsResponse
             {

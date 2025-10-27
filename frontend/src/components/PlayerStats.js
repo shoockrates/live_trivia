@@ -17,7 +17,8 @@ const PlayerStats = ({ user, onBack }) => {
   useEffect(() => {
   const fetchStats = async () => {
     try {
-      const response = await fetch(`http://localhost:5216/statistics/player`, {
+      setLoading(true);
+      const response = await fetch('http://localhost:5216/statistics/player', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -25,17 +26,22 @@ const PlayerStats = ({ user, onBack }) => {
       
       if (response.ok) {
         const realStats = await response.json();
+        console.log('Fetched stats:', realStats);
+        
         setStats({
           totalGames: realStats.totalGamesPlayed,
           totalCorrect: realStats.totalCorrectAnswers,
           totalQuestions: realStats.totalQuestionsAnswered,
           averageScore: realStats.averageScore,
           bestScore: realStats.bestScore,
-          categoriesPlayed: realStats.categoryStats.map(cat => cat.category)
+          categoriesPlayed: realStats.categoryStats?.map(cat => cat.category) || []
         });
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to fetch statistics:', errorText);
       }
     } catch (error) {
-      console.error('Failed to fetch statistics:', error);
+      console.error('Error fetching statistics:', error);
     } finally {
       setLoading(false);
     }
@@ -108,7 +114,7 @@ const PlayerStats = ({ user, onBack }) => {
               </svg>
             </div>
             <div className="stat-content">
-              <div className="stat-value">{stats.bestScore}%</div>
+              <div className="stat-value">{stats.bestScore}</div>
               <div className="stat-label">Best Score</div>
             </div>
           </div>
