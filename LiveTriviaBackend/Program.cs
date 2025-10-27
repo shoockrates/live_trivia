@@ -39,6 +39,7 @@ builder.Services.AddDbContext<TriviaDbContext>(options =>
 builder.Services.AddScoped<GamesRepository>();
 builder.Services.AddScoped<QuestionsRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
 builder.Services.AddAuthentication(options =>
 {

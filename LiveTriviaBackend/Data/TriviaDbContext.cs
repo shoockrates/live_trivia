@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using live_trivia;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -15,6 +14,7 @@ namespace live_trivia.Data
         public DbSet<GamePlayer> GamePlayers { get; set; }
         public DbSet<PlayerAnswer> PlayerAnswers { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<PlayerStatistics> PlayerStatistics { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -179,6 +179,22 @@ namespace live_trivia.Data
                      .WithMany()
                      .HasForeignKey(u => u.PlayerId)
                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Configure PlayerStatistics table
+            modelBuilder.Entity<PlayerStatistics>(entity =>
+            {
+                entity.HasKey(ps => ps.Id);
+                entity.Property(ps => ps.Id).ValueGeneratedOnAdd();
+
+                // Index for quick lookups
+                entity.HasIndex(ps => ps.PlayerId).IsUnique();
+
+                // Relationship
+                entity.HasOne(ps => ps.Player)
+                    .WithOne()
+                    .HasForeignKey<PlayerStatistics>(ps => ps.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
