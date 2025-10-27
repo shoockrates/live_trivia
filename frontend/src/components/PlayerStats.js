@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './PlayerStats.css';
 
+
+
 const PlayerStats = ({ user, onBack }) => {
   const [stats, setStats] = useState({
     totalGames: 0,
@@ -13,22 +15,40 @@ const PlayerStats = ({ user, onBack }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock data for now - in a real app, this would fetch from the API
-    const mockStats = {
-      totalGames: 12,
-      totalCorrect: 89,
-      totalQuestions: 120,
-      averageScore: 74,
-      bestScore: 95,
-      categoriesPlayed: ['Science', 'History', 'Geography', 'Sports', 'Movies']
-    };
-    
-    setTimeout(() => {
-      setStats(mockStats);
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5216/statistics/player', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const realStats = await response.json();
+        console.log('Fetched stats:', realStats);
+        
+        setStats({
+          totalGames: realStats.totalGamesPlayed,
+          totalCorrect: realStats.totalCorrectAnswers,
+          totalQuestions: realStats.totalQuestionsAnswered,
+          averageScore: realStats.averageScore,
+          bestScore: realStats.bestScore,
+          categoriesPlayed: realStats.categoryStats?.map(cat => cat.category) || []
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to fetch statistics:', errorText);
+      }
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
 
+  fetchStats();
+}, []);
   const accuracy = stats.totalQuestions > 0 ? Math.round((stats.totalCorrect / stats.totalQuestions) * 100) : 0;
 
   if (loading) {
@@ -94,7 +114,7 @@ const PlayerStats = ({ user, onBack }) => {
               </svg>
             </div>
             <div className="stat-content">
-              <div className="stat-value">{stats.bestScore}%</div>
+              <div className="stat-value">{stats.bestScore}</div>
               <div className="stat-label">Best Score</div>
             </div>
           </div>

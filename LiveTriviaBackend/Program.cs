@@ -7,8 +7,6 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Allow requests from React frontend (localhost:3000)
@@ -22,7 +20,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add controllers and JSON settings (prevent cycles, pretty output)
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -35,10 +32,11 @@ builder.Services.AddDbContext<TriviaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
-// Register repository (one instance per HTTP request)
 builder.Services.AddScoped<GamesRepository>();
 builder.Services.AddScoped<QuestionsRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
+builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -47,7 +45,6 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    // User Secrets automatically loaded into Configuration
     var jwtKey = builder.Configuration["Jwt:Key"]
                  ?? throw new InvalidOperationException("JWT Key not configured. Run: dotnet user-secrets set \"Jwt:Key\" \"your-secret\"");
     options.TokenValidationParameters = new TokenValidationParameters

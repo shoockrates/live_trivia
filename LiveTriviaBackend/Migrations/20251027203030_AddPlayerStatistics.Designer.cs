@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
@@ -11,9 +12,11 @@ using live_trivia.Data;
 namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
-    partial class TriviaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251027203030_AddPlayerStatistics")]
+    partial class AddPlayerStatistics
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,48 +39,6 @@ namespace LiveTriviaBackend.Migrations
                     b.HasIndex("QuestionId");
 
                     b.ToTable("GameQuestion");
-                });
-
-            modelBuilder.Entity("live_trivia.CategoryStatistics", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<double>("Accuracy")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("CorrectAnswers")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("GamesPlayed")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PlayerStatisticsId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalQuestions")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlayerStatisticsId", "Category")
-                        .IsUnique();
-
-                    b.ToTable("CategoryStatistics");
                 });
 
             modelBuilder.Entity("live_trivia.Game", b =>
@@ -225,6 +186,10 @@ namespace LiveTriviaBackend.Migrations
                     b.Property<int>("BestScore")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CategoryStatsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -355,17 +320,6 @@ namespace LiveTriviaBackend.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("live_trivia.CategoryStatistics", b =>
-                {
-                    b.HasOne("live_trivia.PlayerStatistics", "PlayerStatistics")
-                        .WithMany("CategoryStatistics")
-                        .HasForeignKey("PlayerStatisticsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PlayerStatistics");
-                });
-
             modelBuilder.Entity("live_trivia.GamePlayer", b =>
                 {
                     b.HasOne("live_trivia.Game", "Game")
@@ -445,11 +399,6 @@ namespace LiveTriviaBackend.Migrations
                     b.Navigation("GamePlayers");
 
                     b.Navigation("PlayerAnswers");
-                });
-
-            modelBuilder.Entity("live_trivia.PlayerStatistics", b =>
-                {
-                    b.Navigation("CategoryStatistics");
                 });
 
             modelBuilder.Entity("live_trivia.Question", b =>

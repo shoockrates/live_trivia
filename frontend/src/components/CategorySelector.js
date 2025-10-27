@@ -85,14 +85,6 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user, 
     <div className="category-selector-container">
       <div className="category-selector-card">
         <div className="selector-header">
-          <div className="header-top">
-            <button className="back-button" onClick={onBack}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 0L0 8l8 8V0z"/>
-              </svg>
-              Back
-            </button>
-          </div>
           <h1 className="selector-title">Choose Your Challenge</h1>
           <p className="selector-subtitle">Select a category to test your knowledge</p>
           
@@ -158,6 +150,15 @@ const CategorySelector = ({ categories, onSelectCategory, loading, error, user, 
             ))}
           </div>
         )}
+                
+        <div className="header-bottom">
+            <button className="back-button" onClick={onBack}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0L0 8l8 8V0z"/>
+              </svg>
+              Back
+            </button>
+        </div>
 
         {!loading && !error && filteredCategories.length === 0 && searchTerm && (
           <div className="no-results">
