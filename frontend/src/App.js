@@ -152,11 +152,19 @@ function App() {
   };
   
   const handleShowStats = () => {
+    console.log('Showing statistics');
     setShowStats(true);
   };
   
   const handleBackFromStats = () => {
     setShowStats(false);
+    if(gameMode == 'single') {
+            setCurrentView('game');
+        } else if (gameMode = 'multiplayer-lobby'){
+            setCurrentView('game-room');
+        } else {
+            setCurrentView('game-mode')
+        }
   };
   
   const handleShowLeaderboard = () => {
