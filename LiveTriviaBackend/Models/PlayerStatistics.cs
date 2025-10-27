@@ -12,6 +12,9 @@ public class PlayerStatistics : BaseEntity
     public int TotalScore { get; set; }
     public int BestScore { get; set; }
 
+    public double AccuracyPercentage => TotalQuestionsAnswered > 0 ?
+        Math.Round((double)TotalCorrectAnswers / TotalQuestionsAnswered * 100, 2) : 0;
+
     // Time-based stats
     public DateTime? LastPlayedAt { get; set; }
 

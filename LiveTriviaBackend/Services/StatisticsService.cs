@@ -122,6 +122,11 @@ namespace live_trivia.Services
                     .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
             }
 
+            if (stats == null)
+            {
+                return new PlayerStatsResponse();
+            }
+
             var categoryStats = stats.CategoryStatistics
                 .OrderByDescending(cs => cs.GamesPlayed)
                 .Select(cs => new CategoryStat
