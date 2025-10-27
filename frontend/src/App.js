@@ -148,7 +148,6 @@ function App() {
   const handleStartMultiplayerGame = (category) => {
     setSelectedCategory(category);
     setCurrentView('game');
-    // Here you would typically start the multiplayer game
   };
   
   const handleShowStats = () => {
@@ -286,6 +285,7 @@ function App() {
       if (!gameFinished) {
         setGameFinished(true);
         setGameEndedAt(Date.now());
+        updateGameStatistics(selectedCategory, correctCount, questions.length, calculateScore());
       }
       return;
     }
@@ -322,6 +322,36 @@ function App() {
     const seconds = totalSeconds % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+    
+
+  const updateGameStatistics = async (category, correctAnswers, totalQuestions, score) => {
+  try {
+    const response = await fetch(`${API_BASE}/statistics/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        category,
+        score,
+        correctAnswers,
+        totalQuestions
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Failed to update statistics');
+    }
+  } catch (error) {
+    console.error('Error updating statistics:', error);
+  }
+};
+
+const calculateScore = () => {
+  // Simple scoring 
+  return Math.round((correctCount / questions.length) * 100);
+};
 
   // Render authentication views
   if (!isAuthenticated) {
@@ -457,6 +487,8 @@ function App() {
             <UserDropdown 
                 user={user} 
                 onLogout={handleLogout} 
+                onShowStats={handleShowStats}
+                onShowLeaderboard={handleShowLeaderboard}
             />
             </div>
 

@@ -44,7 +44,6 @@ const GameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
   const copyRoomCode = () => {
     navigator.clipboard.writeText(roomCode);
-    // You could add a toast notification here
   };
 
   return (

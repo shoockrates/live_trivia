@@ -51,7 +51,6 @@ const UserDropdown = ({ user, onLogout, onShowStats, onShowLeaderboard }) => {
     } else if (action === 'history' && onShowLeaderboard) {
       onShowLeaderboard();
     }
-    // You can add navigation logic here for different menu items
   };
 
   return (
