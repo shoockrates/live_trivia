@@ -157,9 +157,9 @@ function App() {
   
   const handleBackFromStats = () => {
     setShowStats(false);
-    if(gameMode == 'single') {
+    if(gameMode === 'single') {
             setCurrentView('game');
-        } else if (gameMode = 'multiplayer-lobby'){
+        } else if (gameMode === 'multiplayer-lobby'){
             setCurrentView('game-room');
         } else {
             setCurrentView('game-mode')
