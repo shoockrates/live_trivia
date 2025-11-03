@@ -12,10 +12,3 @@ public record LeaderboardEntry
     public string? Category { get; set; }
     public int Rank { get; set; }
 }
-
-public record LeaderboardResponse
-{
-    public List<LeaderboardEntry> Players { get; set; } = new();
-    public string Filter { get; set; } = string.Empty;
-    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
-}
