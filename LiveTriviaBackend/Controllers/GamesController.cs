@@ -1,4 +1,5 @@
 using live_trivia.Repositories;
+using live_trivia.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

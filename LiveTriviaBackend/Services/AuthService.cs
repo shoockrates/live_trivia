@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using live_trivia.Data;
 using live_trivia.Interfaces;
+using live_trivia.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 

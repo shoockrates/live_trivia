@@ -1,4 +1,4 @@
-namespace live_trivia
+namespace live_trivia.Dtos
 {
     public record AnswerRequest
     {

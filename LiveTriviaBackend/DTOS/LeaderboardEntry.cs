@@ -1,4 +1,4 @@
-namespace LiveTrivia.Dtos;
+namespace live_trivia.Dtos;
 
 public record LeaderboardEntry
 {

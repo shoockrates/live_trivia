@@ -1,4 +1,4 @@
-namespace LiveTrivia.Dtos;
+namespace live_trivia.Dtos;
 public record LeaderboardResponse
 {
     public List<LeaderboardEntry> Players { get; set; } = new();

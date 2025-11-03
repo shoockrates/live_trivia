@@ -1,4 +1,4 @@
-namespace LiveTrivia.Dtos;
+namespace live_trivia.Dtos;
 public record LoginRequest
 {
     public string Username { get; set; } = string.Empty;
