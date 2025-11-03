@@ -16,6 +16,17 @@ namespace live_trivia.Controllers
             _repository = repository;
         }
 
+        [HttpGet("{roomId}")]
+        [Authorize]
+        public async Task<IActionResult> GetGame(string roomId)
+        {
+            var details = await _repository.GetGameDetailsAsync(roomId);
+            if (details == null)
+                return NotFound("Game not found");
+
+            return Ok(details);
+        }
+        
         [HttpPost("{roomId}")]
         [Authorize]
         public async Task<IActionResult> CreateGame(string roomId)

@@ -1,4 +1,5 @@
 using live_trivia.Data;
+using live_trivia.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace live_trivia.Repositories
@@ -28,6 +29,44 @@ namespace live_trivia.Repositories
                 .FirstOrDefaultAsync(g => g.RoomId == roomId);
         }
 
+        public async Task<GameDetailsDto?> GetGameDetailsAsync(string roomId)
+        {
+            var game = await _context.Games
+                .Include(g => g.GamePlayers)
+                    .ThenInclude(gp => gp.Player)
+                .Include(g => g.Questions)
+                .Include(g => g.PlayerAnswers) // load all, filter in memory
+                .FirstOrDefaultAsync(g => g.RoomId == roomId);
+        
+            if (game == null) return null;
+        
+            var questionsList = game.Questions.ToList();
+            var currentQuestion = game.CurrentQuestionIndex >= 0 && game.CurrentQuestionIndex < questionsList.Count
+                ? questionsList[game.CurrentQuestionIndex]
+                : null;
+        
+            var currentAnswers = game.PlayerAnswers
+                .Where(pa => pa.QuestionId == currentQuestion?.Id)
+                .ToList();
+        
+            return new GameDetailsDto
+            {
+                RoomId = game.RoomId,
+                State = game.State.ToString(),
+                CurrentQuestionText = currentQuestion?.Text,
+                CurrentQuestionAnswers = currentQuestion?.Answers,
+                CurrentQuestionIndex = game.CurrentQuestionIndex,
+                TotalQuestions = questionsList.Count,
+                Players = game.GamePlayers.Select(gp => new GamePlayerDto
+                {
+                    PlayerId = gp.PlayerId,
+                    Name = gp.Player.Name,
+                    CurrentScore = gp.Player.Score,
+                    HasSubmittedAnswer = currentAnswers.Any(pa => pa.PlayerId == gp.PlayerId)
+                }).ToList()
+            };
+        }
+        
         public async Task<Player?> GetPlayerByIdAsync(int playerId)
         {
             return await _context.Players
