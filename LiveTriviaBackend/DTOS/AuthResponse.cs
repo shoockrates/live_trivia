@@ -1,4 +1,4 @@
-namespace live_trivia;
+namespace LiveTrivia.Dtos;
 public record AuthResponse
 {
     public string Token { get; set; } = string.Empty;
