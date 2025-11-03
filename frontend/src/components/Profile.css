@@ -1,0 +1,411 @@
+.profile-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.profile-card {
+    width: 100%;
+    max-width: 800px;
+    background: linear-gradient(135deg, rgba(20, 28, 36, 0.4), rgba(10, 14, 19, 0.25));
+    border: 1px solid rgba(156, 200, 255, 0.12);
+    border-radius: 24px;
+    padding: 40px 32px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 12px 40px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(156, 200, 255, 0.05);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    animation: fadeIn 700ms ease both;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid rgba(156, 200, 255, 0.1);
+}
+
+.user-identity {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.user-avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6e7bff, #58c3ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 32px;
+    color: white;
+    box-shadow: 0 8px 24px rgba(110, 123, 255, 0.4);
+}
+
+.user-info {
+    flex: 1;
+}
+
+.username-display {
+    margin: 0 0 8px 0;
+    font-size: 36px;
+    font-weight: 800;
+    color: #eaf2f8;
+    background: linear-gradient(90deg, #9cc8ff, #a6ffe7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1.1;
+}
+
+.user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.player-id,
+.join-date {
+    font-size: 14px;
+    color: #c9d7e6;
+    opacity: 0.8;
+}
+
+.quick-stats {
+    display: flex;
+    gap: 24px;
+}
+
+.quick-stat {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #eaf2f8;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #c9d7e6;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.section-title {
+    margin: 0 0 24px 0;
+    font-size: 24px;
+    color: #eaf2f8;
+    font-weight: 600;
+}
+
+.records-section {
+    margin-bottom: 40px;
+}
+
+.records-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.record-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(20, 28, 36, 0.3);
+    border: 1px solid rgba(156, 200, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.record-card:hover {
+    background: rgba(20, 28, 36, 0.5);
+    border-color: rgba(156, 200, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.record-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.record-content {
+    flex: 1;
+}
+
+.record-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #eaf2f8;
+    margin-bottom: 4px;
+}
+
+.record-label {
+    font-size: 14px;
+    color: #c9d7e6;
+    opacity: 0.8;
+}
+
+.history-section {
+    margin-bottom: 32px;
+}
+
+.games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.game-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(20, 28, 36, 0.3);
+    border: 1px solid rgba(156, 200, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+    transition: all 0.3s ease;
+}
+
+.game-item:hover {
+    background: rgba(20, 28, 36, 0.5);
+    border-color: rgba(156, 200, 255, 0.2);
+}
+
+.game-category {
+    min-width: 100px;
+}
+
+.category-badge {
+    background: linear-gradient(135deg, #6e7bff, #58c3ff);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.game-stats {
+    display: flex;
+    gap: 24px;
+    flex: 1;
+    justify-content: center;
+}
+
+.game-score,
+.game-accuracy,
+.game-duration {
+    text-align: center;
+    min-width: 80px;
+}
+
+.score-value,
+.accuracy-value,
+.duration-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: #eaf2f8;
+    margin-bottom: 2px;
+}
+
+.score-label,
+.accuracy-label,
+.duration-label {
+    font-size: 11px;
+    color: #c9d7e6;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.game-date {
+    font-size: 14px;
+    color: #c9d7e6;
+    opacity: 0.7;
+    min-width: 100px;
+    text-align: right;
+}
+
+.no-games {
+    text-align: center;
+    padding: 40px 20px;
+    color: #c9d7e6;
+    opacity: 0.7;
+}
+
+.back-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(20, 28, 36, 0.4);
+    border: 1px solid rgba(156, 200, 255, 0.2);
+    border-radius: 12px;
+    padding: 12px 20px;
+    color: #c9d7e6;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    width: 100%;
+    justify-content: center;
+}
+
+.back-button:hover {
+    background: rgba(20, 28, 36, 0.6);
+    border-color: rgba(156, 200, 255, 0.4);
+    color: #eaf2f8;
+    transform: translateY(-1px);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(156, 200, 255, 0.2);
+    border-top: 3px solid #6e7bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Scrollbar styling */
+.games-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.games-list::-webkit-scrollbar-track {
+    background: rgba(20, 28, 36, 0.3);
+    border-radius: 3px;
+}
+
+.games-list::-webkit-scrollbar-thumb {
+    background: rgba(156, 200, 255, 0.3);
+    border-radius: 3px;
+}
+
+.games-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 200, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    .profile-card {
+        padding: 32px 24px;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        gap: 24px;
+        text-align: center;
+    }
+
+    .user-identity {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .user-avatar-large {
+        width: 64px;
+        height: 64px;
+        font-size: 24px;
+    }
+
+    .username-display {
+        font-size: 28px;
+    }
+
+    .records-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .game-item {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .game-stats {
+        justify-content: space-around;
+        width: 100%;
+    }
+
+    .game-date {
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-card {
+        padding: 24px 20px;
+    }
+
+    .username-display {
+        font-size: 24px;
+    }
+
+    .section-title {
+        font-size: 20px;
+    }
+
+    .record-card {
+        padding: 16px;
+    }
+
+    .record-icon {
+        font-size: 24px;
+    }
+
+    .record-value {
+        font-size: 20px;
+    }
+
+    .game-stats {
+        gap: 16px;
+    }
+
+    .score-value,
+    .accuracy-value,
+    .duration-value {
+        font-size: 16px;
+    }
+}
