@@ -1,6 +1,6 @@
 ﻿namespace live_trivia;
 
-public class Player : BaseEntity, IComparable<Player>
+public class Player : BaseEntity
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
