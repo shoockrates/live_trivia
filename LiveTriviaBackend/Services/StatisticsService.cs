@@ -1,6 +1,6 @@
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
-using live_trivia.Records;
+using live_trivia.Dtos;
 using live_trivia.Interfaces;
 
 namespace live_trivia.Services

@@ -1,4 +1,4 @@
-namespace live_trivia.Records;
+namespace live_trivia.Dtos;
 
 public record CategoryStat
 {

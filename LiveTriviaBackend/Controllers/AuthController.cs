@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using live_trivia.Interfaces;
+using live_trivia.Dtos;
 
 namespace live_trivia.Controllers
 {

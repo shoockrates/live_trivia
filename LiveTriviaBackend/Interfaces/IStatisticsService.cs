@@ -1,4 +1,4 @@
-using live_trivia.Records;
+using live_trivia.Dtos;
 
 namespace live_trivia.Interfaces;
 
