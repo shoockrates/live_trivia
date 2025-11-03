@@ -11,6 +11,7 @@ import Leaderboard from './components/Leaderboard';
 import CategorySelector from './components/CategorySelector';
 import QuestionDisplay from './components/QuestionDisplay';
 import GameResults from './components/GameResults';
+import Profile from './components/Profile';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -29,6 +30,8 @@ function App() {
   const [gameFinished, setGameFinished] = useState(false);
   const [questionIn, setQuestionIn] = useState(false);
   const [resultsIn, setResultsIn] = useState(false);
+
+
   
   // Authentication states
   const [currentView, setCurrentView] = useState('auth');
@@ -41,6 +44,7 @@ function App() {
   const [currentGameRoom, setCurrentGameRoom] = useState(null);
   const [showStats, setShowStats] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Backend base URL
   const API_BASE = useMemo(() => 'http://localhost:5216', []);
@@ -172,6 +176,22 @@ function App() {
   
   const handleBackFromLeaderboard = () => {
     setShowLeaderboard(false);
+    if(gameMode === 'single') {
+            setCurrentView('game');
+        } else if (gameMode === 'multiplayer-lobby'){
+            setCurrentView('game-room');
+        } else {
+            setCurrentView('game-mode')
+        }
+  };
+
+  const handleShowProfile = () => {
+    console.log('Showing profile, current gameMode:', gameMode);
+    setShowProfile(true);
+  };
+
+  const handleBackFromProfile = () => {
+    setShowProfile(false);
   };
 
   // Load all questions once to derive categories
@@ -396,6 +416,18 @@ const calculateScore = () => {
       </div>
     );
   }
+  
+  // Render player profile
+  if (showProfile) {
+        return (
+          <div className="App">
+            <Profile
+              user={user}
+              onBack={handleBackFromProfile}
+            />
+          </div>
+        );
+  }
 
   // Render player statistics
   if (showStats) {
@@ -409,6 +441,7 @@ const calculateScore = () => {
     );
   }
 
+  
   // Render leaderboard
   if (showLeaderboard) {
     return (
@@ -419,6 +452,8 @@ const calculateScore = () => {
       </div>
     );
   }
+
+  
 
   // Render game mode selector
   if (currentView === 'game-mode') {
@@ -435,6 +470,7 @@ const calculateScore = () => {
             onLogout={handleLogout}
             onShowStats={handleShowStats}
             onShowLeaderboard={handleShowLeaderboard}
+            onShowProfile={handleShowProfile}
           />
         </div>
         <GameModeSelector 
@@ -489,6 +525,7 @@ const calculateScore = () => {
                 onLogout={handleLogout} 
                 onShowStats={handleShowStats}
                 onShowLeaderboard={handleShowLeaderboard}
+                onShowProfile={handleShowProfile}
             />
             </div>
 
