@@ -13,9 +13,17 @@ namespace live_trivia.Repositories
             _context = context;
         }
 
-        public async Task<Game> CreateGameAsync(string roomId)
+        public async Task<Game> CreateGameAsync(string roomId, Player hostPlayer)
         {
-            var game = new Game(roomId);
+            // make sure EF is tracking the player entity
+            _context.Attach(hostPlayer);
+
+            var game = new Game(roomId)
+            {
+                HostPlayer = hostPlayer,
+                HostPlayerId = hostPlayer.Id,
+                CreatedAt = DateTime.UtcNow
+            };
             _context.Games.Add(game);
             await _context.SaveChangesAsync();
             return game;
@@ -32,6 +40,7 @@ namespace live_trivia.Repositories
         public async Task<GameDetailsDto?> GetGameDetailsAsync(string roomId)
         {
             var game = await _context.Games
+                .Include(g => g.HostPlayer)
                 .Include(g => g.GamePlayers)
                     .ThenInclude(gp => gp.Player)
                 .Include(g => g.Questions)
@@ -51,6 +60,9 @@ namespace live_trivia.Repositories
         
             return new GameDetailsDto
             {
+                CreatedAt = game.CreatedAt,
+                StartedAt = game.StartedAt,
+                HostPlayerId = game.HostPlayerId,
                 RoomId = game.RoomId,
                 State = game.State.ToString(),
                 CurrentQuestionText = currentQuestion?.Text,

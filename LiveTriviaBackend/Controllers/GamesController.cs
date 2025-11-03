@@ -26,12 +26,26 @@ namespace live_trivia.Controllers
 
             return Ok(details);
         }
-        
+
         [HttpPost("{roomId}")]
         [Authorize]
         public async Task<IActionResult> CreateGame(string roomId)
         {
-            var game = await _repository.CreateGameAsync(roomId);
+            // 1. SECURELY GET PLAYER ID from JWT Claim
+            var playerIdClaim = User.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                return Unauthorized("Authenticated player identity not found.");
+            }
+
+            // 2. Get the Player entity
+            var player = await _repository.GetPlayerByIdAsync(playerId);
+            if (player == null) return Unauthorized("Associated player profile not found.");
+
+            var game = await _repository.CreateGameAsync(roomId, player);
+            await _repository.AddExistingPlayerToGameAsync(game, player);
+            
+
             return Created($"/games/{roomId}", game);
         }
 
