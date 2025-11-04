@@ -44,7 +44,7 @@ namespace live_trivia.Controllers
 
             var game = await _repository.CreateGameAsync(roomId, player);
             await _repository.AddExistingPlayerToGameAsync(game, player);
-            
+
 
             return Created($"/games/{roomId}", game);
         }
@@ -54,10 +54,10 @@ namespace live_trivia.Controllers
         public async Task<IActionResult> StartGame(string roomId)
         {
             var success = await _repository.StartGameAsync(roomId);
-        
+
             if (!success)
                 return BadRequest("Game could not be started. Make sure there are players and questions.");
-        
+
             return Ok(new { message = "Game started successfully." });
         }
 
@@ -82,15 +82,15 @@ namespace live_trivia.Controllers
                 return BadRequest("Player already in this game.");
             }
 
-            var existingPlayer = await _repository.GetPlayerByIdAsync(playerId); 
-    
+            var existingPlayer = await _repository.GetPlayerByIdAsync(playerId);
+
             if (existingPlayer == null)
             {
                 return Unauthorized("Associated player profile not found.");
             }
 
             await _repository.AddExistingPlayerToGameAsync(game, existingPlayer);
-            
+
             return Ok(existingPlayer);
         }
 
@@ -99,7 +99,7 @@ namespace live_trivia.Controllers
         public async Task<IActionResult> SubmitAnswer(string roomId, [FromBody] AnswerRequest request)
         {
             // The claim is stored as a string, so we must parse it to an int.
-            var playerIdClaim = User.FindFirst("playerId"); 
+            var playerIdClaim = User.FindFirst("playerId");
             if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
             {
                 return Unauthorized("Player identity not found in token.");
@@ -131,6 +131,45 @@ namespace live_trivia.Controllers
             await _repository.SaveChangesAsync();
 
             return Ok(playerAnswer);
+        }
+        [HttpGet("{roomId}/settings")]
+        [Authorize]
+        public async Task<IActionResult> GetSettings(string roomId)
+        {
+            var settings = await _repository.GetGameSettingsAsync(roomId);
+            if (settings == null)
+                return NotFound("Settings not found");
+
+            return Ok(new GameSettingsDto
+            {
+                Category = settings.Category,
+                Difficulty = settings.Difficulty,
+                QuestionCount = settings.QuestionCount,
+                TimeLimitSeconds = settings.TimeLimitSeconds,
+            });
+        }
+
+        [HttpPost("{roomId}/settings")]
+        [Authorize]
+        public async Task<IActionResult> UpdateSettings(string roomId, [FromBody] GameSettingsDto dto)
+        {
+            var game = await _repository.GetGameAsync(roomId);
+            if (game == null)
+                return NotFound("Game not found");
+
+            // 1. SECURELY GET PLAYER ID from JWT Claim
+            var playerIdClaim = User.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                return Unauthorized("Authenticated player identity not found.");
+            }
+            
+            // Only host can update settings
+            if (game.HostPlayerId != playerId)
+                return Forbid("Only the host can modify game settings.");
+
+            var updated = await _repository.UpdateGameSettingsAsync(roomId, dto);
+            return Ok(updated);
         }
 
     }

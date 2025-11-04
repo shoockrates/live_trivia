@@ -25,6 +25,10 @@ namespace live_trivia.Repositories
                 CreatedAt = DateTime.UtcNow
             };
             _context.Games.Add(game);
+
+            var settings = new GameSettings { GameRoomId = roomId };
+            _context.GameSettings.Add(settings);
+
             await _context.SaveChangesAsync();
             return game;
         }
@@ -129,6 +133,30 @@ namespace live_trivia.Repositories
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<GameSettings?> GetGameSettingsAsync(string roomId)
+        {
+            return await _context.GameSettings.FirstOrDefaultAsync(s => s.GameRoomId == roomId);
+        }
+
+        public async Task<GameSettings> UpdateGameSettingsAsync(string roomId, GameSettingsDto dto)
+        {
+            var settings = await _context.GameSettings.FirstOrDefaultAsync(s => s.GameRoomId == roomId);
+
+            if (settings == null)
+            {
+                settings = new GameSettings { GameRoomId = roomId };
+                _context.GameSettings.Add(settings);
+            }
+
+            settings.Category = dto.Category;
+            settings.Difficulty = dto.Difficulty;
+            settings.QuestionCount = dto.QuestionCount;
+            settings.TimeLimitSeconds = dto.TimeLimitSeconds;
+
+            await _context.SaveChangesAsync();
+            return settings;
         }
 
 
