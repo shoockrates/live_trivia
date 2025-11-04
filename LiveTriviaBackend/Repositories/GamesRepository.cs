@@ -46,18 +46,18 @@ namespace live_trivia.Repositories
                 .Include(g => g.Questions)
                 .Include(g => g.PlayerAnswers) // load all, filter in memory
                 .FirstOrDefaultAsync(g => g.RoomId == roomId);
-        
+
             if (game == null) return null;
-        
+
             var questionsList = game.Questions.ToList();
             var currentQuestion = game.CurrentQuestionIndex >= 0 && game.CurrentQuestionIndex < questionsList.Count
                 ? questionsList[game.CurrentQuestionIndex]
                 : null;
-        
+
             var currentAnswers = game.PlayerAnswers
                 .Where(pa => pa.QuestionId == currentQuestion?.Id)
                 .ToList();
-        
+
             return new GameDetailsDto
             {
                 CreatedAt = game.CreatedAt,
@@ -78,7 +78,7 @@ namespace live_trivia.Repositories
                 }).ToList()
             };
         }
-        
+
         public async Task<Player?> GetPlayerByIdAsync(int playerId)
         {
             return await _context.Players
@@ -105,6 +105,32 @@ namespace live_trivia.Repositories
         {
             await _context.SaveChangesAsync(); // Only needed if using EF Core or similar
         }
+        public async Task<bool> StartGameAsync(string roomId)
+        {
+            var game = await _context.Games
+                .Include(g => g.GamePlayers)
+                .Include(g => g.Questions)
+                .FirstOrDefaultAsync(g => g.RoomId == roomId);
+
+            if (game == null)
+                return false;
+
+            if (game.State == GameState.InProgress)
+                return true; // already started
+
+            if (game.GamePlayers.Count < 1 || game.Questions.Count == 0)
+                return false; // cannot start empty game
+
+            game.State = GameState.InProgress;
+            game.StartedAt = DateTime.UtcNow;
+            game.CurrentQuestionIndex = 0;
+
+            _context.Games.Update(game);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
 
     }
 }

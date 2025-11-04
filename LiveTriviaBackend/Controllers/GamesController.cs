@@ -49,6 +49,18 @@ namespace live_trivia.Controllers
             return Created($"/games/{roomId}", game);
         }
 
+        [HttpPost("{roomId}/start")]
+        [Authorize]
+        public async Task<IActionResult> StartGame(string roomId)
+        {
+            var success = await _repository.StartGameAsync(roomId);
+        
+            if (!success)
+                return BadRequest("Game could not be started. Make sure there are players and questions.");
+        
+            return Ok(new { message = "Game started successfully." });
+        }
+
         [HttpPost("{roomId}/join")]
         [Authorize]
         public async Task<IActionResult> JoinGame(string roomId)
