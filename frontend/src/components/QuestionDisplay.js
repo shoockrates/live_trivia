@@ -14,11 +14,15 @@ const QuestionDisplay = ({
   revealed,
   questionIn
 }) => {
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [selectedAnswers, setSelectedAnswers] = useState([]); // MULTI-CHOICE SUPPORT
+  const [selectedAnswer, setSelectedAnswer] = useState(null); // Keep for single
   const [timeLeft, setTimeLeft] = useState(30);
   const [isAnswered, setIsAnswered] = useState(false);
 
+  const isMultiChoice = correctIndexes.length > 1; // New variable - multi-choice detection
+
   useEffect(() => {
+    setSelectedAnswers([]);
     setSelectedAnswer(null);
     setIsAnswered(false);
     setTimeLeft(30);
@@ -29,16 +33,32 @@ const QuestionDisplay = ({
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && !isAnswered) {
-      handleAnswerSelect(-1); // Time's up
+      handleSubmit(); // times up on multi mode
     }
   }, [timeLeft, isAnswered]);
 
-  const handleAnswerSelect = (index) => {
+  // Handle single or multi-answer selection
+  const handleAnswerSelect = (idx) => {
     if (isAnswered) return;
-    
-    setSelectedAnswer(index);
+    if (isMultiChoice) {
+      // Toggle selection
+      setSelectedAnswers(selected =>
+        selected.includes(idx)
+          ? selected.filter(n => n !== idx)
+          : [...selected, idx]
+      );
+    } else {
+      setSelectedAnswer(idx);
+      setIsAnswered(true);
+      onAnswerSelect(idx);
+    }
+  };
+
+  // On user presses submit/next for multi-choice
+  const handleSubmit = () => {
+    if (isAnswered) return;
     setIsAnswered(true);
-    onAnswerSelect(index);
+    onAnswerSelect(isMultiChoice ? selectedAnswers.slice().sort((a,b)=>a-b) : selectedAnswer);
   };
 
   const getAnswerColor = (index) => {
@@ -50,7 +70,6 @@ const QuestionDisplay = ({
     ];
     return colors[index] || colors[0];
   };
-
   const getAnswerIcon = (index) => {
     const icons = ['A', 'B', 'C', 'D'];
     return icons[index] || '?';
@@ -61,7 +80,7 @@ const QuestionDisplay = ({
   return (
     <div className="question-display-container">
       <div className="question-card">
-        {/* Header with progress and timer */}
+        {/* Header */}
         <div className="question-header">
           <div className="progress-section">
             <div className="progress-bar">
@@ -74,7 +93,6 @@ const QuestionDisplay = ({
               Question {currentIndex + 1} of {totalQuestions}
             </div>
           </div>
-          
           <div className="timer-section">
             <div className={`timer ${timeLeft <= 10 ? 'warning' : ''}`}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -88,31 +106,40 @@ const QuestionDisplay = ({
         {/* Question text */}
         <div className="question-content">
           <h2 className="question-text">{question}</h2>
+          {isMultiChoice && (
+            <div className="multi-choice-indicator">
+              <span className="rectangle-indicator" /> Multi Choice (select all that apply)
+            </div>
+          )}
         </div>
 
-        {/* Answer options */}
+        {/* Answers */}
         <div className="answers-container">
           {answers.map((answer, index) => {
-            const isSelected = selectedAnswer === index;
+            const isSelected = isMultiChoice
+              ? selectedAnswers.includes(index)
+              : selectedAnswer === index;
             const isCorrect = correctIndexes.includes(index);
             const isWrong = isSelected && !isCorrect;
-            const isRevealed = revealed && (isCorrect || isWrong);
-            
+            const isRevealed = isAnswered && (isCorrect || isWrong);
             const answerColor = getAnswerColor(index);
             const answerIcon = getAnswerIcon(index);
-            
             return (
               <button
                 key={index}
                 className={`answer-option ${isSelected ? 'selected' : ''} ${isRevealed ? (isCorrect ? 'correct' : 'wrong') : ''}`}
                 onClick={() => handleAnswerSelect(index)}
-                disabled={isAnswered}
+                disabled={isAnswered && !isMultiChoice}
                 style={{
                   '--answer-color': answerColor.bg,
                   '--answer-hover': answerColor.hover,
                   animationDelay: `${index * 100}ms`
                 }}
               >
+                {/* Rectangle indicator for multi-choice */}
+                {isMultiChoice && (
+                  <span className={`multi-choice-rectangle ${isSelected ? 'multi-choice-rectangle-selected' : ''}`}></span>
+                )}
                 <div className="answer-icon">
                   {answerIcon}
                 </div>
@@ -137,7 +164,7 @@ const QuestionDisplay = ({
           })}
         </div>
 
-        {/* Stats and controls */}
+        {/* Footer Section */}
         <div className="question-footer">
           <div className="stats-section">
             <div className="stat-item correct">
@@ -153,17 +180,30 @@ const QuestionDisplay = ({
               <span>{wrongCount}</span>
             </div>
           </div>
-
-          <button
-            className="next-button"
-            onClick={onNext}
-            disabled={!revealed}
-          >
-            {currentIndex >= totalQuestions - 1 ? 'Finish Quiz' : 'Next Question'}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 0L0 8l8 8V0z"/>
-            </svg>
-          </button>
+          {/* Next or Submit for Multi Choice */}
+          {isMultiChoice ? (
+            <button
+              className="next-button"
+              onClick={handleSubmit}
+              disabled={isAnswered || selectedAnswers.length === 0}
+            >
+              Submit
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0L0 8l8 8V0z"/>
+              </svg>
+            </button>
+          ) : (
+            <button
+              className="next-button"
+              onClick={onNext}
+              disabled={!isAnswered}
+            >
+              {currentIndex >= totalQuestions - 1 ? 'Finish Quiz' : 'Next Question'}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0L0 8l8 8V0z"/>
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>
