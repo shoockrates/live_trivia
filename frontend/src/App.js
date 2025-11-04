@@ -30,6 +30,7 @@ function App() {
   const [gameFinished, setGameFinished] = useState(false);
   const [questionIn, setQuestionIn] = useState(false);
   const [resultsIn, setResultsIn] = useState(false);
+  const [earlySubmitDialogOpen, setEarlySubmitDialogOpen] = useState(false);
 
 
   
@@ -510,6 +511,25 @@ const calculateScore = () => {
   }
 
   // Render main game for authenticated users
+  const showSubmitButton = selectedCategory && !gameFinished && questions.length > 0;
+  const handleEarlyFinish = () => {
+    if (window.confirm('Are you sure you want to end the game now? Unanswered questions will be counted as incorrect and your progress will be lost.')) {
+      setGameFinished(true);
+      setGameEndedAt(Date.now());
+      // missing answers => wrong
+      setWrongCount(w => w + (questions.length - (correctCount + wrongCount)));
+    }
+  };
+  const submitAnswersBtn = showSubmitButton ? (
+    <button
+      className="next-button endgame-early"
+      style={{background: 'linear-gradient(135deg, #e74c3c, #6e7bff)', marginTop: 20}}
+      onClick={handleEarlyFinish}
+    >
+      Submit Answers
+    </button>
+  ) : null;
+
   return (
     <div className="App">
       <div className="TriviaContainer">
@@ -584,6 +604,7 @@ const calculateScore = () => {
                 category={selectedCategory}
               />
             )}
+            {submitAnswersBtn}
           </>
         )}
       </div>
