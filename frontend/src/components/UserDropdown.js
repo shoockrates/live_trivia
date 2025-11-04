@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './UserDropdown.css';
 
-const UserDropdown = ({ user, onLogout, onShowStats, onShowLeaderboard }) => {
+const UserDropdown = ({ user, onLogout, onShowStats, onShowLeaderboard, onShowProfile }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -50,6 +50,8 @@ const UserDropdown = ({ user, onLogout, onShowStats, onShowLeaderboard }) => {
       onShowStats();
     } else if (action === 'history' && onShowLeaderboard) {
       onShowLeaderboard();
+    } else if (action === 'profile' && onShowProfile) {
+      onShowProfile();
     }
   };
 

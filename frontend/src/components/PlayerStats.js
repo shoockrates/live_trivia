@@ -16,36 +16,44 @@ const PlayerStats = ({ user, onBack }) => {
 
   useEffect(() => {
   const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:5216/statistics/player', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const realStats = await response.json();
-        console.log('Fetched stats:', realStats);
-        
-        setStats({
-          totalGames: realStats.totalGamesPlayed,
-          totalCorrect: realStats.totalCorrectAnswers,
-          totalQuestions: realStats.totalQuestionsAnswered,
-          averageScore: realStats.averageScore,
-          bestScore: realStats.bestScore,
-          categoriesPlayed: realStats.categoryStats?.map(cat => cat.category) || []
-        });
-      } else {
-        const errorText = await response.text();
-        console.error('Failed to fetch statistics:', errorText);
+  try {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    console.log('Fetching stats with token:', token ? 'Present' : 'Missing');
+    
+    const response = await fetch('http://localhost:5216/statistics/player', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
-    } catch (error) {
-      console.error('Error fetching statistics:', error);
-    } finally {
-      setLoading(false);
+    });
+    
+    console.log('Response status:', response.status);
+    
+    if (response.ok) {
+      const realStats = await response.json();
+      console.log('Fetched stats:', realStats);
+      
+      setStats({
+        totalGames: realStats.totalGamesPlayed || 0,
+        totalCorrect: realStats.totalCorrectAnswers || 0,
+        totalQuestions: realStats.totalQuestionsAnswered || 0,
+        averageScore: realStats.averageScore || 0,
+        bestScore: realStats.bestScore || 0,
+        accuracyPercentage: realStats.accuracyPercentage || 0,
+        categoriesPlayed: realStats.categoryStats?.map(cat => cat.category) || []
+      });
+    } else {
+      const errorText = await response.text();
+      console.error('Failed to fetch statistics:', response.status, errorText);
+      // Set some default stats or show error message
     }
-  };
+  } catch (error) {
+    console.error('Error fetching statistics:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   fetchStats();
 }, []);
