@@ -75,17 +75,24 @@ public class AuthService : IAuthService
     private string GenerateJwtToken(User user)
     {
         var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
-        var jwtIssuer = _configuration["Jwt:Issuer"] ?? "live-trivia-users";
-        var jwtAudience = _configuration["Jwt:Audience"];
+        var jwtIssuer = _configuration["Jwt:Issuer"] ?? "live-trivia";
+        var jwtAudience = _configuration["Jwt:Audience"] ?? "live-trivia-users";
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
+        // Validate that PlayerId exists
+        if (user.PlayerId == null)
+        {
+            throw new InvalidOperationException($"User {user.Username} has no associated PlayerId");
+        }
+
         var claims = new[]
         {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim("playerId", user.PlayerId.Value.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim("username", user.Username),
-            new Claim("playerId", user.PlayerId.ToString() ?? "")
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
         var token = new JwtSecurityToken(
