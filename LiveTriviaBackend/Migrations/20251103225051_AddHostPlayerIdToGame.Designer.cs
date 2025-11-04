@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
@@ -11,9 +12,11 @@ using live_trivia.Data;
 namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
-    partial class TriviaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251103225051_AddHostPlayerIdToGame")]
+    partial class AddHostPlayerIdToGame
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -145,37 +148,6 @@ namespace LiveTriviaBackend.Migrations
                         .IsUnique();
 
                     b.ToTable("GamePlayers");
-                });
-
-            modelBuilder.Entity("live_trivia.GameSettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Category")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Difficulty")
-                        .HasColumnType("text");
-
-                    b.Property<string>("GameRoomId")
-                        .IsRequired()
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("QuestionCount")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TimeLimitSeconds")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GameRoomId");
-
-                    b.ToTable("GameSettings");
                 });
 
             modelBuilder.Entity("live_trivia.Player", b =>
@@ -428,17 +400,6 @@ namespace LiveTriviaBackend.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("Player");
-                });
-
-            modelBuilder.Entity("live_trivia.GameSettings", b =>
-                {
-                    b.HasOne("live_trivia.Game", "Game")
-                        .WithMany()
-                        .HasForeignKey("GameRoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("live_trivia.PlayerAnswer", b =>

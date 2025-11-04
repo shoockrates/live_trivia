@@ -16,6 +16,7 @@ namespace live_trivia.Data
         public DbSet<User> Users { get; set; }
         public DbSet<PlayerStatistics> PlayerStatistics { get; set; }
         public DbSet<CategoryStatistics> CategoryStatistics { get; set; }
+        public DbSet<GameSettings> GameSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

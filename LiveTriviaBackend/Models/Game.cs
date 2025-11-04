@@ -9,6 +9,8 @@ public class Game : BaseEntity
     public DateTime? EndedAt { get; set; }
     public int TotalQuestions => Questions.Count;
 
+    public int? HostPlayerId { get; set; }          // Foreign key
+    public Player? HostPlayer { get; set; }         // Navigation property
     public virtual ICollection<GamePlayer> GamePlayers { get; set; } = new List<GamePlayer>();
     public virtual ICollection<PlayerAnswer> PlayerAnswers { get; set; } = new List<PlayerAnswer>();
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
