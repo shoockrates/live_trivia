@@ -2,6 +2,7 @@ using live_trivia.Repositories;
 using live_trivia.Services;
 using live_trivia.Data;
 using live_trivia.Interfaces;
+using live_trivia.Hubs;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,7 +17,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:3000")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -31,6 +33,8 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<TriviaDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
+
+builder.Services.AddSignalR();
 
 builder.Services.AddScoped<GamesRepository>();
 builder.Services.AddScoped<QuestionsRepository>();
@@ -119,6 +123,8 @@ app.UseHttpsRedirection();
 
 // Map API controllers
 app.MapControllers();
+
+app.MapHub<GameHub>("/gameHub");
 
 // Run the app
 app.Run();

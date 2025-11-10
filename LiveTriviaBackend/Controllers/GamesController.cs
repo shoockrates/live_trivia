@@ -1,7 +1,9 @@
 using live_trivia.Repositories;
 using live_trivia.Dtos;
+using live_trivia.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace live_trivia.Controllers
 {
@@ -10,10 +12,12 @@ namespace live_trivia.Controllers
     public class GamesController : ControllerBase
     {
         private readonly GamesRepository _repository;
+        private readonly IHubContext<GameHub> _hubContext;
 
-        public GamesController(GamesRepository repository)
+        public GamesController(GamesRepository repository, IHubContext<GameHub> hubContext)
         {
             _repository = repository;
+            _hubContext = hubContext;
         }
 
         [HttpGet("{roomId}")]
@@ -58,6 +62,10 @@ namespace live_trivia.Controllers
             if (!success)
                 return BadRequest("Game could not be started. Make sure there are players and questions.");
 
+            // Notify all clients
+            var gameDetails = await _repository.GetGameDetailsAsync(roomId);
+            await _hubContext.Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
+
             return Ok(new { message = "Game started successfully." });
         }
 
@@ -88,11 +96,11 @@ namespace live_trivia.Controllers
 
             return Ok(new { message = "Moved to next question.", questionIndex = game.CurrentQuestionIndex });
         }
+
         [HttpPost("{roomId}/join")]
         [Authorize]
         public async Task<IActionResult> JoinGame(string roomId)
         {
-            // 1. SECURELY GET PLAYER ID from JWT Claim
             var playerIdClaim = User.FindFirst("playerId");
             if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
             {
@@ -103,14 +111,12 @@ namespace live_trivia.Controllers
             if (game == null)
                 return NotFound("Game not found");
 
-            // 2. CHECK IF PLAYER IS ALREADY IN GAME
             if (game.GamePlayers.Any(gp => gp.PlayerId == playerId))
             {
                 return BadRequest("Player already in this game.");
             }
 
             var existingPlayer = await _repository.GetPlayerByIdAsync(playerId);
-
             if (existingPlayer == null)
             {
                 return Unauthorized("Associated player profile not found.");
@@ -118,9 +124,16 @@ namespace live_trivia.Controllers
 
             await _repository.AddExistingPlayerToGameAsync(game, existingPlayer);
 
+            // Notify all clients in the room
+            var gameDetails = await _repository.GetGameDetailsAsync(roomId);
+            await _hubContext.Clients.Group(roomId).SendAsync("PlayerJoined", new
+            {
+                Player = new { existingPlayer.Id, existingPlayer.Name },
+                GameState = gameDetails
+            });
+
             return Ok(existingPlayer);
         }
-
         [HttpPost("{roomId}/answer")]
         [Authorize]
         public async Task<IActionResult> SubmitAnswer(string roomId, [FromBody] AnswerRequest request)
@@ -190,7 +203,7 @@ namespace live_trivia.Controllers
             {
                 return Unauthorized("Authenticated player identity not found.");
             }
-            
+
             // Only host can update settings
             if (game.HostPlayerId != playerId)
                 return Forbid("Only the host can modify game settings.");
