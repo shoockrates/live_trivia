@@ -1,5 +1,6 @@
 using live_trivia.Data;
 using live_trivia.Dtos;
+using live_trivia.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace live_trivia.Repositories
@@ -115,15 +116,43 @@ namespace live_trivia.Repositories
                 .Include(g => g.GamePlayers)
                 .Include(g => g.Questions)
                 .FirstOrDefaultAsync(g => g.RoomId == roomId);
-
-            if (game == null)
+            if (game == null || game.GamePlayers.Count < 1)
+            {
                 return false;
+            }
 
-            if (game.State == GameState.InProgress)
-                return true; // already started
+            if (game.State == GameState.InProgress) return true;
 
-            if (game.GamePlayers.Count < 1 || game.Questions.Count == 0)
-                return false; // cannot start empty game
+            // Load games settings
+            var settings = await _context.GameSettings.FirstOrDefaultAsync(s => s.GameRoomId == roomId);
+            if (settings == null) return false;
+
+            // Load questions from DB based on settings
+            var questionsQuery = _context.Questions.AsQueryable();
+
+            if (!string.IsNullOrEmpty(settings.Category))
+                questionsQuery = questionsQuery.Where(q => q.Category == settings.Category);
+
+            if (!string.IsNullOrEmpty(settings.Difficulty))
+                questionsQuery = questionsQuery.Where(q => q.Difficulty == settings.Difficulty);
+
+            var questions = await questionsQuery
+                .OrderBy(_ => Guid.NewGuid()) // randomize
+                .Take(settings.QuestionCount)
+                .ToListAsync();
+
+            if (questions.Count < settings.QuestionCount)
+            {
+                Console.WriteLine($"Not enough questions found. Requested {settings.QuestionCount}, got {questions.Count}.");
+                return false;
+            }
+
+            // Clear any previous questions, then add new
+            game.Questions.Clear();
+            foreach (var q in questions)
+            {
+                game.Questions.Add(q);
+            }
 
             game.State = GameState.InProgress;
             game.StartedAt = DateTime.UtcNow;
@@ -150,10 +179,15 @@ namespace live_trivia.Repositories
                 _context.GameSettings.Add(settings);
             }
 
-            settings.Category = dto.Category;
-            settings.Difficulty = dto.Difficulty;
+            settings.Category = string.IsNullOrWhiteSpace(dto.Category)
+                ? "Geography"
+                : dto.Category.ToLower().CapitalizeFirstLetter();
+
+            settings.Difficulty = string.IsNullOrWhiteSpace(dto.Difficulty)
+                ? "medium"
+                : dto.Difficulty.ToLower();
             settings.QuestionCount = dto.QuestionCount;
-            settings.TimeLimitSeconds = dto.TimeLimitSeconds;
+            settings.TimeLimitSeconds = dto.TimeLimitSeconds > 0 ? dto.TimeLimitSeconds : 15;
 
             await _context.SaveChangesAsync();
             return settings;
