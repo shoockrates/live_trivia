@@ -43,11 +43,6 @@ public class Game : BaseEntity
         }
     }
 
-    public void ResetPlayersAnswers()
-    {
-        // This will now be handled by creating new PlayerAnswer records
-    }
-
     public List<Player> GetLeaderboard()
     {
         return GamePlayers
@@ -96,7 +91,7 @@ public class Game : BaseEntity
 
             if (playerAnswer != null)
             {
-                playerAnswer.IsCorrect= question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
+                playerAnswer.IsCorrect = question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
                                  playerAnswer.SelectedAnswerIndexes.All(i => question.CorrectAnswerIndexes.Contains(i));
                 if (playerAnswer.IsCorrect)
                 {
