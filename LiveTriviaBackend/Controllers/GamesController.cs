@@ -4,6 +4,8 @@ using live_trivia.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using live_trivia.Services;
+using live_trivia.Interfaces;
 
 namespace live_trivia.Controllers
 {
@@ -13,10 +15,11 @@ namespace live_trivia.Controllers
     {
         private readonly GamesRepository _repository;
         private readonly IHubContext<GameHub> _hubContext;
+        private readonly IGameService _gameService;
 
-        public GamesController(GamesRepository repository, IHubContext<GameHub> hubContext)
+        public GamesController(IGameService gameService, IHubContext<GameHub> hubContext)
         {
-            _repository = repository;
+            _gameService = gameService;
             _hubContext = hubContext;
         }
 
@@ -24,7 +27,7 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> GetGame(string roomId)
         {
-            var details = await _repository.GetGameDetailsAsync(roomId);
+            var details = await _gameService.GetGameDetailsAsync(roomId);
             if (details == null)
                 return NotFound("Game not found");
 
@@ -43,11 +46,11 @@ namespace live_trivia.Controllers
             }
 
             // 2. Get the Player entity
-            var player = await _repository.GetPlayerByIdAsync(playerId);
+            var player = await _gameService.GetPlayerByIdAsync(playerId);
             if (player == null) return Unauthorized("Associated player profile not found.");
 
-            var game = await _repository.CreateGameAsync(roomId, player);
-            await _repository.AddExistingPlayerToGameAsync(game, player);
+            var game = await _gameService.CreateGameAsync(roomId, player);
+            await _gameService.AddExistingPlayerToGameAsync(game, player);
 
 
             return Created($"/games/{roomId}", game);
@@ -57,7 +60,7 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> StartGame(string roomId)
         {
-            var success = await _repository.StartGameAsync(roomId);
+            var success = await _gameService.StartGameAsync(roomId);
 
             if (!success)
                 return BadRequest("Game could not be started. Make sure there are players and questions.");
@@ -73,7 +76,7 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> NextQuestion(string roomId)
         {
-            var game = await _repository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
                 return NotFound("Game not found");
 
@@ -89,7 +92,7 @@ namespace live_trivia.Controllers
             game.ScoreCurrentQuestion();
 
             var moved = game.MoveNextQuestion();
-            await _repository.SaveChangesAsync();
+            await _gameService.SaveChangesAsync();
 
             if (!moved)
                 return Ok(new { message = "Game finished.", state = game.State.ToString() });
@@ -107,7 +110,7 @@ namespace live_trivia.Controllers
                 return Unauthorized("Authenticated player identity not found.");
             }
 
-            var game = await _repository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
                 return NotFound("Game not found");
 
@@ -116,13 +119,14 @@ namespace live_trivia.Controllers
                 return BadRequest("Player already in this game.");
             }
 
-            var existingPlayer = await _repository.GetPlayerByIdAsync(playerId);
+            var existingPlayer = await _gameService.GetPlayerByIdAsync(playerId);
+
             if (existingPlayer == null)
             {
                 return Unauthorized("Associated player profile not found.");
             }
 
-            await _repository.AddExistingPlayerToGameAsync(game, existingPlayer);
+            await _gameService.AddExistingPlayerToGameAsync(game, existingPlayer);
 
             // Notify all clients in the room
             var gameDetails = await _repository.GetGameDetailsAsync(roomId);
@@ -145,7 +149,7 @@ namespace live_trivia.Controllers
                 return Unauthorized("Player identity not found in token.");
             }
 
-            var game = await _repository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
                 return NotFound("Game not found");
 
@@ -168,7 +172,7 @@ namespace live_trivia.Controllers
 
             game.PlayerAnswers.Add(playerAnswer);
 
-            await _repository.SaveChangesAsync();
+            await _gameService.SaveChangesAsync();
 
             return Ok(playerAnswer);
         }
@@ -176,7 +180,7 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> GetSettings(string roomId)
         {
-            var settings = await _repository.GetGameSettingsAsync(roomId);
+            var settings = await _gameService.GetGameSettingsAsync(roomId);
             if (settings == null)
                 return NotFound("Settings not found");
 
@@ -193,7 +197,7 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> UpdateSettings(string roomId, [FromBody] GameSettingsDto dto)
         {
-            var game = await _repository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
                 return NotFound("Game not found");
 
@@ -208,7 +212,7 @@ namespace live_trivia.Controllers
             if (game.HostPlayerId != playerId)
                 return Forbid("Only the host can modify game settings.");
 
-            var updated = await _repository.UpdateGameSettingsAsync(roomId, dto);
+            var updated = await _gameService.UpdateGameSettingsAsync(roomId, dto);
             return Ok(updated);
         }
 

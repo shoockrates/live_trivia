@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using live_trivia.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using live_trivia.Extensions;
+using live_trivia.Services;
+using live_trivia.Interfaces;
 
 namespace LiveTriviaBackend.Controllers
 {
@@ -9,24 +11,24 @@ namespace LiveTriviaBackend.Controllers
     [Route("questions")]
     public class QuestionsController : ControllerBase
     {
-        private readonly QuestionsRepository _repository;
+        private readonly IQuestionService _questionService;
 
-        public QuestionsController(QuestionsRepository repository)
+        public QuestionsController(IQuestionService questionService)
         {
-            _repository = repository;
+            _questionService = questionService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllQuestions()
         {
-            var questions = await _repository.GetAllAsync();
+            var questions = await _questionService.GetAllAsync();
             return Ok(questions);
         }
 
         [HttpGet("random")]
         public async Task<IActionResult> GetRandom()
         {
-            var question = await _repository.GetRandomAsync();
+            var question = await _questionService.GetRandomAsync();
             if (question == null) return NotFound("No questions available.");
             return Ok(question);
         }
@@ -34,7 +36,7 @@ namespace LiveTriviaBackend.Controllers
         [HttpGet("category/{category}")]
         public async Task<IActionResult> GetByCategory(string category)
         {
-            var questions = await _repository.GetByCategoryAsync(category.ToLower().CapitalizeFirstLetter());
+            var questions = await _questionService.GetByCategoryAsync(category.ToLower().CapitalizeFirstLetter());
             return Ok(questions);
         }
 
@@ -45,7 +47,7 @@ namespace LiveTriviaBackend.Controllers
         {
             try
             {
-                var addedCount = await _repository.LoadFromFileAsync(file);
+                var addedCount = await _questionService.LoadFromFileAsync(file);
                 if (addedCount == 0)
                     return Ok("No new questions to add.");
                 return Ok($"{addedCount} questions loaded from {file}");
