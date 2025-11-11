@@ -61,6 +61,22 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "live-trivia-users",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for our hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/gameHub"))
+            {
+                // Read the token out of the query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -71,8 +87,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "LiveTrivia API", Version = "v1" });
-
-    // Add "Authorize" button to Swagger
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -115,6 +129,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -124,6 +139,7 @@ app.UseHttpsRedirection();
 // Map API controllers
 app.MapControllers();
 
+// Map SignalR Hub
 app.MapHub<GameHub>("/gameHub");
 
 // Run the app

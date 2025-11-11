@@ -12,6 +12,8 @@ import CategorySelector from './components/CategorySelector';
 import QuestionDisplay from './components/QuestionDisplay';
 import GameResults from './components/GameResults';
 import Profile from './components/Profile';
+import MultiplayerGameRoom from './components/MultiplayerGameRoom';
+import MultiplayerGame from './components/MultiplayerGame';
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -31,6 +33,7 @@ function App() {
   const [questionIn, setQuestionIn] = useState(false);
   const [resultsIn, setResultsIn] = useState(false);
   const [earlySubmitDialogOpen, setEarlySubmitDialogOpen] = useState(false);
+  const [multiplayerGame, setMultiplayerGame] = useState(null);
 
 
   
@@ -135,24 +138,19 @@ function App() {
   const handleCreateGame = (newRoomCode) => {
     setRoomCode(newRoomCode);
     setCurrentGameRoom({ roomCode: newRoomCode, isHost: true });
-    setCurrentView('game-room');
+    setCurrentView('multiplayer-game-room');
   };
   
   const handleJoinGame = (joinedRoomCode) => {
     setRoomCode(joinedRoomCode);
     setCurrentGameRoom({ roomCode: joinedRoomCode, isHost: false });
-    setCurrentView('game-room');
+    setCurrentView('multiplayer-game-room');
   };
   
   const handleBackToLobby = () => {
     setCurrentView('multiplayer-lobby');
     setRoomCode(null);
     setCurrentGameRoom(null);
-  };
-  
-  const handleStartMultiplayerGame = (category) => {
-    setSelectedCategory(category);
-    setCurrentView('game');
   };
   
   const handleShowStats = () => {
@@ -193,6 +191,22 @@ function App() {
 
   const handleBackFromProfile = () => {
     setShowProfile(false);
+  };
+
+  const handleStartMultiplayerGame = (category, roomCode) => {
+    setSelectedCategory(category);
+    setMultiplayerGame({ roomCode, category });
+    setCurrentView('multiplayer-game');
+  };
+
+  const handleMultiplayerGameFinished = (results) => {
+    setCurrentView('multiplayer-results');
+    console.log('Multiplayer game finished:', results);
+  };
+
+  const handleBackToMultiplayerLobby = () => {
+    setCurrentView('multiplayer-lobby');
+    setMultiplayerGame(null);
   };
 
   // Load all questions once to derive categories
@@ -453,8 +467,32 @@ const calculateScore = () => {
       </div>
     );
   }
-
   
+  if (currentView === 'multiplayer-game-room') {
+    return (
+      <div className="App">
+        <MultiplayerGameRoom
+          roomCode={roomCode}
+          user={user}
+          onBack={handleBackToLobby}
+          onStartGame={handleStartMultiplayerGame}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === 'multiplayer-game') {
+    return (
+      <div className="App">
+        <MultiplayerGame
+          roomCode={multiplayerGame.roomCode}
+          user={user}
+          onGameFinished={handleMultiplayerGameFinished}
+          onBack={handleBackToMultiplayerLobby}
+        />
+      </div>
+    );
+  }
 
   // Render game mode selector
   if (currentView === 'game-mode') {
@@ -510,7 +548,10 @@ const calculateScore = () => {
     );
   }
 
-  // Render main game for authenticated users
+
+
+
+    // Render main game for authenticated users
   const showSubmitButton = selectedCategory && !gameFinished && questions.length > 0;
   const handleEarlyFinish = () => {
     if (window.confirm('Are you sure you want to end the game now? Unanswered questions will be counted as incorrect and your progress will be lost.')) {

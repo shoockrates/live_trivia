@@ -27,6 +27,7 @@ const MultiplayerLobby = ({ onBack, onCreateGame, onJoinGame, user }) => {
         throw new Error('Failed to create game');
       }
 
+      // This now calls the updated handler that goes to multiplayer-game-room
       onCreateGame(newRoomCode);
     } catch (err) {
       setError(err.message);
@@ -58,6 +59,7 @@ const MultiplayerLobby = ({ onBack, onCreateGame, onJoinGame, user }) => {
         throw new Error(errorText || 'Failed to join game');
       }
 
+      // This now calls the updated handler that goes to multiplayer-game-room
       onJoinGame(roomCode.toUpperCase());
     } catch (err) {
       setError(err.message);
