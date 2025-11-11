@@ -1,8 +1,9 @@
 namespace live_trivia.Services;
 using live_trivia.Repositories;
 using live_trivia.Dtos;
+using live_trivia.Interfaces;
 
-public class GameService
+public class GameService : IGameService
 {
     private readonly GamesRepository _gamesRepo;
 

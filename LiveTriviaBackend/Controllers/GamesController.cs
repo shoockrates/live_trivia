@@ -3,6 +3,7 @@ using live_trivia.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using live_trivia.Services;
+using live_trivia.Interfaces;
 
 namespace live_trivia.Controllers
 {
@@ -10,9 +11,9 @@ namespace live_trivia.Controllers
     [Route("games")]
     public class GamesController : ControllerBase
     {
-        private readonly GameService _gameService;
+        private readonly IGameService _gameService;
 
-        public GamesController(GameService gameService)
+        public GamesController(IGameService gameService)
         {
             _gameService = gameService;
         }
