@@ -37,6 +37,8 @@ builder.Services.AddScoped<QuestionsRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
+builder.Services.AddScoped<IGameService, GameService>();
+builder.Services.AddScoped<IQuestionService, QuestionService>();
 
 builder.Services.AddAuthentication(options =>
 {
