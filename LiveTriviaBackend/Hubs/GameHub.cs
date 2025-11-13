@@ -1,18 +1,17 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
-using live_trivia.Repositories;
 using live_trivia.Data;
-using live_trivia.Services;
+using live_trivia.Interfaces;
 
 namespace live_trivia.Hubs
 {
     [Authorize] // Require authentication for all hub methods
     public class GameHub : Hub
     {
-        private readonly GameService _gameService;
+        private readonly IGameService _gameService;
         private readonly TriviaDbContext _context;
 
-        public GameHub(GameService gameService, TriviaDbContext context)
+        public GameHub(IGameService gameService, TriviaDbContext context)
         {
             _gameService = gameService;
             _context = context;
