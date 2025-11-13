@@ -39,6 +39,23 @@ namespace live_trivia.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<Question>> GetRandomQuestionsAsync(int count, string? category, string? difficulty)
+        {
+            var query = _context.Questions.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(category))
+                query = query.Where(q => EF.Functions.ILike(q.Category, category));
+
+            if (!string.IsNullOrWhiteSpace(difficulty))
+                query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
+
+            // Randomize and take only the requested count
+            return await query
+                .OrderBy(_ => Guid.NewGuid()) // EF random order
+                .Take(count)
+                .ToListAsync();
+        }
+
         // Load new questions from file
         public async Task<int> LoadFromFileAsync(string filePath)
         {

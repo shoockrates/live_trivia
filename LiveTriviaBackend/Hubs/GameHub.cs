@@ -2,18 +2,19 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using live_trivia.Repositories;
 using live_trivia.Data;
+using live_trivia.Services;
 
 namespace live_trivia.Hubs
 {
     [Authorize] // Require authentication for all hub methods
     public class GameHub : Hub
     {
-        private readonly GamesRepository _gamesRepository;
+        private readonly GameService _gameService;
         private readonly TriviaDbContext _context;
 
-        public GameHub(GamesRepository gamesRepository, TriviaDbContext context)
+        public GameHub(GameService gameService, TriviaDbContext context)
         {
-            _gamesRepository = gamesRepository;
+            _gameService = gameService;
             _context = context;
         }
 
@@ -28,10 +29,10 @@ namespace live_trivia.Hubs
             Console.WriteLine($"Player {playerName} (ID: {playerIdClaim?.Value}) joined room {roomId}");
 
             // Notify other players that someone joined
-            var game = await _gamesRepository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game != null)
             {
-                var gameDetails = await _gamesRepository.GetGameDetailsAsync(roomId);
+                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
                 await Clients.Group(roomId).SendAsync("PlayerJoined", new
                 {
                     PlayerId = Context.ConnectionId,
@@ -66,7 +67,7 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            var game = await _gamesRepository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
             {
                 await Clients.Caller.SendAsync("GameStartFailed", "Game not found");
@@ -80,10 +81,10 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            var success = await _gamesRepository.StartGameAsync(roomId);
+            var success = await _gameService.StartGameAsync(roomId);
             if (success)
             {
-                var gameDetails = await _gamesRepository.GetGameDetailsAsync(roomId);
+                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
                 await Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
             }
             else
@@ -106,7 +107,7 @@ namespace live_trivia.Hubs
             Console.WriteLine($"Player {playerName} (ID: {playerId}) submitted answer for question {questionId}");
 
             // Store the answer and notify others
-            var game = await _gamesRepository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game != null)
             {
                 await Clients.Group(roomId).SendAsync("AnswerSubmitted", new
@@ -127,7 +128,7 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            var game = await _gamesRepository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
             {
                 return;
@@ -143,11 +144,11 @@ namespace live_trivia.Hubs
             // Score current question before moving
             game.ScoreCurrentQuestion();
             var moved = game.MoveNextQuestion();
-            await _gamesRepository.SaveChangesAsync();
+            await _gameService.SaveChangesAsync();
 
             if (moved)
             {
-                var gameDetails = await _gamesRepository.GetGameDetailsAsync(roomId);
+                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
                 await Clients.Group(roomId).SendAsync("NextQuestion", gameDetails);
             }
             else
@@ -170,7 +171,7 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            var game = await _gamesRepository.GetGameAsync(roomId);
+            var game = await _gameService.GetGameAsync(roomId);
             if (game == null || game.HostPlayerId != playerId)
             {
                 await Clients.Caller.SendAsync("Error", "Only the host can update settings");

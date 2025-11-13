@@ -2,28 +2,51 @@ namespace live_trivia.Services;
 using live_trivia.Repositories;
 using live_trivia.Dtos;
 using live_trivia.Interfaces;
-
+using live_trivia.Extensions;
 public class GameService : IGameService
 {
     private readonly GamesRepository _gamesRepo;
+    private readonly QuestionsRepository _questionsRepo;
 
-    public GameService(GamesRepository gamesRepo)
+    public GameService(GamesRepository gamesRepo, QuestionsRepository questionsRepo)
     {
         _gamesRepo = gamesRepo;
+        _questionsRepo = questionsRepo;
     }
-
     public async Task<bool> StartGameAsync(string roomId)
     {
-        // Maybe some extra rules here:
-        var game = await _gamesRepo.GetGameAsync(roomId);
-        if (game == null)
+        var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true, includeQuestions: true);
+        if (game == null || game.GamePlayers.Count < 1)
             return false;
 
         if (game.State == GameState.InProgress)
             return true;
 
-        // Could log, check some other business rules, etc.
-        return await _gamesRepo.StartGameAsync(roomId);
+        // Load game settings
+        var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
+        if (settings == null)
+            return false;
+
+        // Fetch random questions from QuestionsRepository
+        var questions = await _questionsRepo.GetRandomQuestionsAsync(settings.QuestionCount, settings.Category, settings.Difficulty);
+
+        if (questions.Count < settings.QuestionCount)
+        {
+            Console.WriteLine($"Not enough questions found. Requested {settings.QuestionCount}, got {questions.Count}.");
+            return false;
+        }
+
+        // Replace previous questions
+        game.Questions.Clear();
+        foreach (var q in questions)
+            game.Questions.Add(q);
+
+        game.State = GameState.InProgress;
+        game.StartedAt = DateTime.UtcNow;
+        game.CurrentQuestionIndex = 0;
+
+        await _gamesRepo.SaveChangesAsync();
+        return true;
     }
 
     public async Task<Game?> GetGameAsync(string roomId)
@@ -37,7 +60,37 @@ public class GameService : IGameService
 
     public async Task<GameDetailsDto?> GetGameDetailsAsync(string roomId)
     {
-        return await _gamesRepo.GetGameDetailsAsync(roomId);
+        var game = await _gamesRepo.GetGameDetailsAsync(roomId);
+        if (game == null) return null;
+
+        var questions = game.Questions.ToList();
+        var currentQuestion = (game.CurrentQuestionIndex >= 0 && game.CurrentQuestionIndex < questions.Count)
+            ? questions[game.CurrentQuestionIndex]
+            : null;
+
+        var currentAnswers = game.PlayerAnswers
+            .Where(pa => pa.QuestionId == currentQuestion?.Id)
+            .ToList();
+
+        return new GameDetailsDto
+        {
+            CreatedAt = game.CreatedAt,
+            StartedAt = game.StartedAt,
+            HostPlayerId = game.HostPlayerId,
+            RoomId = game.RoomId,
+            State = game.State.ToString(),
+            CurrentQuestionText = currentQuestion?.Text,
+            CurrentQuestionAnswers = currentQuestion?.Answers,
+            CurrentQuestionIndex = game.CurrentQuestionIndex,
+            TotalQuestions = questions.Count,
+            Players = game.GamePlayers.Select(gp => new GamePlayerDto
+            {
+                PlayerId = gp.PlayerId,
+                Name = gp.Player.Name,
+                CurrentScore = gp.Player.Score,
+                HasSubmittedAnswer = currentAnswers.Any(pa => pa.PlayerId == gp.PlayerId)
+            }).ToList()
+        };
     }
     public async Task<GameSettings?> GetGameSettingsAsync(string roomId)
     {
@@ -46,17 +99,41 @@ public class GameService : IGameService
 
     public async Task<Game> CreateGameAsync(string roomId, Player hostPlayer)
     {
-        // Could enforce extra business rules like max players, etc.
-        return await _gamesRepo.CreateGameAsync(roomId, hostPlayer);
+        var game = new Game
+        {
+            RoomId = roomId,
+            HostPlayer = hostPlayer,
+            State = GameState.WaitingForPlayers,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _gamesRepo.AddSync(game);
+        await _gamesRepo.SaveChangesAsync();
+        return game;
     }
     public async Task<GameSettings> UpdateGameSettingsAsync(string roomId, GameSettingsDto dto)
     {
-        // Business rule: maybe restrict category change if game already started
         var game = await _gamesRepo.GetGameAsync(roomId);
         if (game?.State == GameState.InProgress)
             throw new InvalidOperationException("Cannot change settings after game started.");
 
-        return await _gamesRepo.UpdateGameSettingsAsync(roomId, dto);
+        var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
+        if (settings == null)
+        {
+            settings = new GameSettings { GameRoomId = roomId };
+            await _gamesRepo.AddGameSettings(settings);
+        }
+
+        settings.Category = string.IsNullOrWhiteSpace(dto.Category)
+            ? "Geography"
+            : dto.Category.ToLower().CapitalizeFirstLetter();
+
+        settings.Difficulty = string.IsNullOrWhiteSpace(dto.Difficulty)
+            ? "medium"
+            : dto.Difficulty.ToLower();
+        settings.QuestionCount = dto.QuestionCount;
+        settings.TimeLimitSeconds = dto.TimeLimitSeconds > 0 ? dto.TimeLimitSeconds : 15;
+        await _gamesRepo.SaveChangesAsync();
+        return settings;
     }
 
     public async Task<Player?> GetPlayerByIdAsync(int playerId)
@@ -66,7 +143,17 @@ public class GameService : IGameService
 
     public async Task AddExistingPlayerToGameAsync(Game game, Player player)
     {
-        await _gamesRepo.AddExistingPlayerToGameAsync(game, player);
+        if (game == null || player == null)
+        {
+            throw new ArgumentNullException("Game and Player must not be null.");
+        }
+
+        var gamePlayer = new GamePlayer
+        {
+            GameRoomId = game.RoomId,
+            PlayerId = player.Id,
+        };
+        await _gamesRepo.AddGamePlayerAsync(gamePlayer);
     }
 
     public async Task SaveChangesAsync()
