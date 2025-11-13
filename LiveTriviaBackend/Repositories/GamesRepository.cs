@@ -52,7 +52,7 @@ namespace live_trivia.Repositories
         public async Task AddGamePlayerAsync(GamePlayer player)
         {
             await _context.GamePlayers.AddAsync(player);
-            await _context.SaveChangesAsync();
+            await SaveChangesAsync();
         }
         public async Task SaveChangesAsync()
         {
@@ -61,7 +61,7 @@ namespace live_trivia.Repositories
         public async Task AddGameSettings(GameSettings settings)
         {
             _context.Add(settings);
-            await _context.SaveChangesAsync();
+            await SaveChangesAsync();
         }
         public async Task<GameSettings?> GetGameSettingsAsync(string roomId)
         {
