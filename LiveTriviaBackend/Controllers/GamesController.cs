@@ -13,7 +13,6 @@ namespace live_trivia.Controllers
     [Route("games")]
     public class GamesController : ControllerBase
     {
-        private readonly GamesRepository _repository;
         private readonly IHubContext<GameHub> _hubContext;
         private readonly IGameService _gameService;
 
@@ -66,7 +65,7 @@ namespace live_trivia.Controllers
                 return BadRequest("Game could not be started. Make sure there are players and questions.");
 
             // Notify all clients
-            var gameDetails = await _repository.GetGameDetailsAsync(roomId);
+            var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
             await _hubContext.Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
 
             return Ok(new { message = "Game started successfully." });
@@ -129,7 +128,7 @@ namespace live_trivia.Controllers
             await _gameService.AddExistingPlayerToGameAsync(game, existingPlayer);
 
             // Notify all clients in the room
-            var gameDetails = await _repository.GetGameDetailsAsync(roomId);
+            var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
             await _hubContext.Clients.Group(roomId).SendAsync("PlayerJoined", new
             {
                 Player = new { existingPlayer.Id, existingPlayer.Name },
