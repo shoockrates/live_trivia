@@ -284,27 +284,28 @@
 }
 
 .next-button.endgame-early {
-  background: linear-gradient(135deg, #e74c3c, #6e7bff);
-  color: #fff;
-  font-weight: 700;
-  margin: 32px auto 0 auto;
-  display: block;
-  width: fit-content;
-  border: none;
-  border-radius: 11px;
-  padding: 14px 32px;
-  font-size: 1.04rem;
-  letter-spacing: .3px;
-  box-shadow: 0 2px 20px #e74c3c30;
-  outline: none;
-  cursor: pointer;
-  transition: background 0.22s, box-shadow 0.18s, transform 0.18s;
+    background: linear-gradient(135deg, #e74c3c, #6e7bff);
+    color: #fff;
+    font-weight: 700;
+    margin: 32px auto 0 auto;
+    display: block;
+    width: fit-content;
+    border: none;
+    border-radius: 11px;
+    padding: 14px 32px;
+    font-size: 1.04rem;
+    letter-spacing: .3px;
+    box-shadow: 0 2px 20px #e74c3c30;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.22s, box-shadow 0.18s, transform 0.18s;
 }
 
-.next-button.endgame-early:hover,.next-button.endgame-early:focus {
-  background: linear-gradient(120deg, #ff7675, #6e7bff);
-  box-shadow: 0 8px 34px #e74c3c54, 0 1.5px 11px #6e7bff22;
-  transform: scale(1.035);
+.next-button.endgame-early:hover,
+.next-button.endgame-early:focus {
+    background: linear-gradient(120deg, #ff7675, #6e7bff);
+    box-shadow: 0 8px 34px #e74c3c54, 0 1.5px 11px #6e7bff22;
+    transform: scale(1.035);
 }
 
 @keyframes fadeIn {
@@ -399,41 +400,57 @@
 }
 
 .multi-choice-indicator {
-  display: flex;
-  align-items: center;
-  margin-bottom: 18px;
-  font-size: 15px;
-  color: #88e0ff;
-  font-weight: 600;
+    display: flex;
+    align-items: center;
+    margin-bottom: 18px;
+    font-size: 15px;
+    color: #88e0ff;
+    font-weight: 600;
 }
 
 .rectangle-indicator {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #6e7bff;
-  border-radius: 4px;
-  margin-right: 10px;
-  background: rgba(20, 28, 36, 0.4);
-  position: relative;
-  top: 1px;
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #6e7bff;
+    border-radius: 4px;
+    margin-right: 10px;
+    background: rgba(20, 28, 36, 0.4);
+    position: relative;
+    top: 1px;
 }
 
 .multi-choice-rectangle {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #6e7bff;
-  border-radius: 5px;
-  margin-right: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: box-shadow 0.18s, border-color 0.18s, background 0.18s;
-  background: rgba(24, 29, 39, .90);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #6e7bff;
+    border-radius: 5px;
+    margin-right: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: box-shadow 0.18s, border-color 0.18s, background 0.18s;
+    background: rgba(24, 29, 39, .90);
 }
 
 .multi-choice-rectangle-selected {
-  border-color: #2ecc71;
-  background: linear-gradient(135deg, #6e7bff50, #2ecc7130);
-  box-shadow: 0 0 0 2px #6e7bff44;
+    border-color: #2ecc71;
+    background: linear-gradient(135deg, #6e7bff50, #2ecc7130);
+    box-shadow: 0 0 0 2px #6e7bff44;
+}
+
+/* Make sure the footer always shows the button properly */
+.question-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 32px;
+}
+
+/* Force button to be visible */
+.next-button {
+    min-height: 48px;
+    opacity: 1 !important;
 }

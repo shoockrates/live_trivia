@@ -1,213 +1,219 @@
 import React, { useState, useEffect } from 'react';
 import './QuestionDisplay.css';
 
-const QuestionDisplay = ({ 
-  question, 
-  answers, 
-  correctIndexes, 
-  onAnswerSelect, 
-  onNext, 
-  currentIndex, 
-  totalQuestions,
-  correctCount,
-  wrongCount,
-  revealed,
-  questionIn
+const QuestionDisplay = ({
+    question,
+    answers,
+    correctIndexes = [],
+    onAnswerSelect,
+    onNext,
+    currentIndex = 0,
+    totalQuestions = 5,
+    correctCount = 0,
+    wrongCount = 0,
+    revealed = false,
+    questionIn = true,
+
+    // Multiplayer props
+    isMultiplayer = false,
+    isHost = false,
+    answeredPlayers = 0,
+    totalPlayers = 1,
 }) => {
-  const [selectedAnswers, setSelectedAnswers] = useState([]); // MULTI-CHOICE SUPPORT
-  const [selectedAnswer, setSelectedAnswer] = useState(null); // Keep for single
-  const [timeLeft, setTimeLeft] = useState(30);
-  const [isAnswered, setIsAnswered] = useState(false);
+    const [selectedAnswers, setSelectedAnswers] = useState([]);
+    const [isAnswered, setIsAnswered] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(30);
 
-  const isMultiChoice = correctIndexes.length > 1; // New variable - multi-choice detection
+    const isMultiChoice = correctIndexes.length > 1;
 
-  useEffect(() => {
-    setSelectedAnswers([]);
-    setSelectedAnswer(null);
-    setIsAnswered(false);
-    setTimeLeft(30);
-  }, [currentIndex]);
+    useEffect(() => {
+        setSelectedAnswers([]);
+        setIsAnswered(false);
+        setTimeLeft(30);
+    }, [currentIndex]);
 
-  useEffect(() => {
-    if (!isAnswered && timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !isAnswered) {
-      handleSubmit(); // times up on multi mode
-    }
-  }, [timeLeft, isAnswered]);
+    useEffect(() => {
+        if (!isAnswered && timeLeft > 0) {
+            const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+        if (timeLeft === 0 && !isAnswered) handleSubmit();
+    }, [timeLeft, isAnswered]);
 
-  // Handle single or multi-answer selection
-  const handleAnswerSelect = (idx) => {
-    if (isAnswered) return;
-    if (isMultiChoice) {
-      // Toggle selection
-      setSelectedAnswers(selected =>
-        selected.includes(idx)
-          ? selected.filter(n => n !== idx)
-          : [...selected, idx]
-      );
-    } else {
-      setSelectedAnswer(idx);
-      setIsAnswered(true);
-      onAnswerSelect(idx);
-    }
-  };
+    const handleAnswerClick = (idx) => {
+        if (isAnswered) return;
 
-  // On user presses submit/next for multi-choice
-  const handleSubmit = () => {
-    if (isAnswered) return;
-    setIsAnswered(true);
-    onAnswerSelect(isMultiChoice ? selectedAnswers.slice().sort((a,b)=>a-b) : selectedAnswer);
-  };
-
-  const getAnswerColor = (index) => {
-    const colors = [
-      { bg: '#2ecc71', hover: '#27ae60' },
-      { bg: '#3498db', hover: '#2980b9' },
-      { bg: '#e74c3c', hover: '#c0392b' },
-      { bg: '#f39c12', hover: '#e67e22' }
-    ];
-    return colors[index] || colors[0];
-  };
-  const getAnswerIcon = (index) => {
-    const icons = ['A', 'B', 'C', 'D'];
-    return icons[index] || '?';
-  };
-
-  const progressPercentage = ((currentIndex + (revealed ? 1 : 0)) / totalQuestions) * 100;
-
-  return (
-    <div className="question-display-container">
-      <div className="question-card">
-        {/* Header */}
-        <div className="question-header">
-          <div className="progress-section">
-            <div className="progress-bar">
-              <div 
-                className="progress-fill"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-            <div className="progress-text">
-              Question {currentIndex + 1} of {totalQuestions}
-            </div>
-          </div>
-          <div className="timer-section">
-            <div className={`timer ${timeLeft <= 10 ? 'warning' : ''}`}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"/>
-              </svg>
-              {timeLeft}s
-            </div>
-          </div>
-        </div>
-
-        {/* Question text */}
-        <div className="question-content">
-          <h2 className="question-text">{question}</h2>
-          {isMultiChoice && (
-            <div className="multi-choice-indicator">
-              <span className="rectangle-indicator" /> Multi Choice (select all that apply)
-            </div>
-          )}
-        </div>
-
-        {/* Answers */}
-        <div className="answers-container">
-          {answers.map((answer, index) => {
-            const isSelected = isMultiChoice
-              ? selectedAnswers.includes(index)
-              : selectedAnswer === index;
-            const isCorrect = correctIndexes.includes(index);
-            const isWrong = isSelected && !isCorrect;
-            const isRevealed = isAnswered && (isCorrect || isWrong);
-            const answerColor = getAnswerColor(index);
-            const answerIcon = getAnswerIcon(index);
-            return (
-              <button
-                key={index}
-                className={`answer-option ${isSelected ? 'selected' : ''} ${isRevealed ? (isCorrect ? 'correct' : 'wrong') : ''}`}
-                onClick={() => handleAnswerSelect(index)}
-                disabled={isAnswered && !isMultiChoice}
-                style={{
-                  '--answer-color': answerColor.bg,
-                  '--answer-hover': answerColor.hover,
-                  animationDelay: `${index * 100}ms`
-                }}
-              >
-                {/* Rectangle indicator for multi-choice */}
-                {isMultiChoice && (
-                  <span className={`multi-choice-rectangle ${isSelected ? 'multi-choice-rectangle-selected' : ''}`}></span>
-                )}
-                <div className="answer-icon">
-                  {answerIcon}
-                </div>
-                <div className="answer-text">
-                  {answer}
-                </div>
-                {isRevealed && (
-                  <div className="answer-result">
-                    {isCorrect ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                      </svg>
-                    )}
-                  </div>
-                )}
-              </button>
+        if (isMultiChoice) {
+            setSelectedAnswers(prev =>
+                prev.includes(idx)
+                    ? prev.filter(i => i !== idx)
+                    : [...prev, idx]
             );
-          })}
-        </div>
+        } else {
+            setSelectedAnswers([idx]);
+        }
+    };
 
-        {/* Footer Section */}
-        <div className="question-footer">
-          <div className="stats-section">
-            <div className="stat-item correct">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-              </svg>
-              <span>{correctCount}</span>
+    const handleSubmit = () => {
+        if (isAnswered || selectedAnswers.length === 0) return;
+
+        setIsAnswered(true);
+
+        const finalAnswer = [...selectedAnswers].sort((a, b) => a - b);
+        console.log('FINAL SUBMITTED ANSWER:', finalAnswer); // ← YOU MUST SEE THIS
+        onAnswerSelect(finalAnswer);
+    };
+
+    // Auto-advance only in multiplayer or if not skipped
+    useEffect(() => {
+        if (!isMultiplayer && isAnswered) {
+            const timer = setTimeout(() => {
+                if (currentIndex < totalQuestions - 1) onNext();
+            }, 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [isAnswered, isMultiplayer, currentIndex, totalQuestions, onNext]);
+
+    const getAnswerColor = (i) => ['#2ecc71', '#3498db', '#e74c3c', '#f39c12'][i] || '#6e7bff';
+    const getAnswerIcon = (i) => ['A', 'B', 'C', 'D'][i] || '?';
+
+    return (
+        <div className="question-display-container">
+            <div className={`question-card ${questionIn ? 'question-in' : ''}`}>
+                {/* Header */}
+                <div className="question-header">
+                    <div className="progress-section">
+                        <div className="progress-bar">
+                            <div
+                                className="progress-fill"
+                                style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
+                            />
+                        </div>
+                        <div className="progress-text">
+                            Question {currentIndex + 1} of {totalQuestions}
+                        </div>
+                    </div>
+                    <div className="timer-section">
+                        <div className={`timer ${timeLeft <= 10 ? 'warning' : ''}`}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13h-1v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                            </svg>
+                            {timeLeft}s
+                        </div>
+                    </div>
+                </div>
+
+                <h2 className="question-text">{question}</h2>
+
+                {isMultiChoice && (
+                    <div className="multi-choice-indicator">
+                        <div className="rectangle-indicator" />
+                        Select all that apply
+                    </div>
+                )}
+
+                <div className="answers-container">
+                    {answers.map((ans, idx) => {
+                        const selected = selectedAnswers.includes(idx);
+                        const correct = revealed && correctIndexes.includes(idx);
+                        const wrong = revealed && selected && !correctIndexes.includes(idx);
+
+                        return (
+                            <button
+                                key={idx}
+                                className={`answer-option ${selected ? 'selected' : ''} ${revealed ? (correct ? 'correct' : wrong ? 'wrong' : 'faded') : ''
+                                    }`}
+                                onClick={() => handleAnswerClick(idx)}
+                                disabled={isAnswered}
+                            >
+                                <div className="answer-icon" style={{ '--answer-color': getAnswerColor(idx) }}>
+                                    {getAnswerIcon(idx)}
+                                </div>
+                                <div className="answer-text">{ans}</div>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* FOOTER — FINAL & PERFECT */}
+                <div className="question-footer">
+                    <div className="stats-section">
+                        <div className="stat-item correct">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                            </svg>
+                            <span>{correctCount}</span>
+                        </div>
+                        <div className="stat-item wrong">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            </svg>
+                            <span>{wrongCount}</span>
+                        </div>
+                    </div>
+
+                    {/* HOST: Next Question */}
+                    {isMultiplayer && isHost && answeredPlayers >= totalPlayers && (
+                        <button className="next-button" onClick={onNext}>
+                            Next Question
+                        </button>
+                    )}
+
+                    {/* NON-HOST: Submit → Waiting */}
+                    {isMultiplayer && !isHost && !isAnswered && (
+                        <button
+                            className="next-button"
+                            onClick={handleSubmit}
+                            disabled={selectedAnswers.length === 0}
+                        >
+                            Submit Answer
+                        </button>
+                    )}
+
+                    {isMultiplayer && !isHost && isAnswered && (
+                        <div style={{ color: '#88e0ff', fontSize: '16px', fontWeight: '600' }}>
+                            Waiting for host… ({answeredPlayers}/{totalPlayers})
+                        </div>
+                    )}
+
+                    {/* SINGLE PLAYER: Submit button */}
+                    {!isMultiplayer && !isAnswered && (
+                        <button
+                            className="next-button"
+                            onClick={handleSubmit}
+                            disabled={selectedAnswers.length === 0}
+                        >
+                            {isMultiChoice ? 'Submit Answers' : 'Submit Answer'}
+                        </button>
+                    )}
+
+                    {/* SINGLE PLAYER: SKIP WAIT WITH NEXT BUTTON */}
+                    {!isMultiplayer && isAnswered && currentIndex < totalQuestions - 1 && (
+                        <button className="next-button" onClick={onNext}>
+                            Next Question →
+                        </button>
+                    )}
+
+                    {/* SINGLE PLAYER: Last question → Finish */}
+                    {!isMultiplayer && isAnswered && currentIndex >= totalQuestions - 1 && (
+                        <button className="next-button" onClick={onNext}>
+                            Finish Quiz
+                        </button>
+                    )}
+                </div>
             </div>
-            <div className="stat-item wrong">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-              <span>{wrongCount}</span>
-            </div>
-          </div>
-          {/* Next or Submit for Multi Choice */}
-          {isMultiChoice ? (
-            <button
-              className="next-button"
-              onClick={handleSubmit}
-              disabled={isAnswered || selectedAnswers.length === 0}
-            >
-              Submit
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 0L0 8l8 8V0z"/>
-              </svg>
-            </button>
-          ) : (
-            <button
-              className="next-button"
-              onClick={onNext}
-              disabled={!isAnswered}
-            >
-              {currentIndex >= totalQuestions - 1 ? 'Finish Quiz' : 'Next Question'}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 0L0 8l8 8V0z"/>
-              </svg>
-            </button>
-          )}
         </div>
-      </div>
-    </div>
-  );
+    );
+};
+
+QuestionDisplay.defaultProps = {
+    correctIndexes: [],
+    revealed: false,
+    questionIn: true,
+    isMultiplayer: false,
+    isHost: false,
+    answeredPlayers: 0,
+    totalPlayers: 1,
 };
 
 export default QuestionDisplay;

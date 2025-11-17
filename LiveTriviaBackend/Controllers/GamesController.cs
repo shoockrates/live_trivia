@@ -189,6 +189,7 @@ namespace live_trivia.Controllers
 
             return Ok(playerAnswer);
         }
+
         [HttpGet("{roomId}/settings")]
         [Authorize]
         public async Task<IActionResult> GetSettings(string roomId)
