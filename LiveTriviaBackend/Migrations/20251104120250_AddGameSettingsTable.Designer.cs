@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
+using System.Diagnostics.CodeAnalysis;
 
 #nullable disable
 
@@ -16,6 +17,7 @@ namespace LiveTriviaBackend.Migrations
     partial class AddGameSettingsTable
     {
         /// <inheritdoc />
+        [ExcludeFromCodeCoverage]
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
