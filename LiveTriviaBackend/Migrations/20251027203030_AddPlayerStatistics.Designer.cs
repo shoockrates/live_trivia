@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
+using System.Diagnostics.CodeAnalysis;
 
 #nullable disable
 
@@ -13,6 +14,7 @@ namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
     [Migration("20251027203030_AddPlayerStatistics")]
+    [ExcludeFromCodeCoverage]
     partial class AddPlayerStatistics
     {
         /// <inheritdoc />

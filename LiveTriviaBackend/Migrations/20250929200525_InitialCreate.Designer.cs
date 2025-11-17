@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
+using System.Diagnostics.CodeAnalysis;
 
 #nullable disable
 
@@ -12,6 +13,7 @@ namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
     [Migration("20250929200525_InitialCreate")]
+    [ExcludeFromCodeCoverage]
     partial class InitialCreate
     {
         /// <inheritdoc />
