@@ -454,3 +454,51 @@
     min-height: 48px;
     opacity: 1 !important;
 }
+
+/* Multiplayer Status */
+.multiplayer-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: rgba(20, 28, 36, 0.4);
+    border: 1px solid rgba(156, 200, 255, 0.2);
+    border-radius: 12px;
+}
+
+.players-progress {
+    font-size: 14px;
+    color: #9cc8ff;
+    font-weight: 600;
+}
+
+.host-indicator {
+    font-size: 12px;
+    color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+/* Host Next Button */
+.host-next-button {
+    background: linear-gradient(135deg, #f39c12, #e67e22) !important;
+    box-shadow: 0 8px 24px rgba(243, 156, 18, 0.3) !important;
+}
+
+.host-next-button:hover {
+    background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    box-shadow: 0 12px 32px rgba(243, 156, 18, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+/* Responsive for mobile */
+@media (max-width: 768px) {
+    .multiplayer-status {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+}

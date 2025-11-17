@@ -202,8 +202,6 @@ function App() {
 
     const handleMultiplayerGameFinished = (results) => {
         console.log('Multiplayer game finished:', results);
-        setCurrentView('multiplayer-game');
-        // TODO: Implement multiplayer results screen
     };
 
     const handleBackToMultiplayerLobby = () => {

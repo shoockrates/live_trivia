@@ -15,6 +15,7 @@ const QuestionDisplay = ({
     questionIn = true,
 
     // Multiplayer props
+    isLastQuestion = false,
     isMultiplayer = false,
     isHost = false,
     answeredPlayers = 0,
@@ -60,7 +61,7 @@ const QuestionDisplay = ({
         setIsAnswered(true);
 
         const finalAnswer = [...selectedAnswers].sort((a, b) => a - b);
-        console.log('FINAL SUBMITTED ANSWER:', finalAnswer); // ← YOU MUST SEE THIS
+
         onAnswerSelect(finalAnswer);
     };
 
@@ -93,6 +94,18 @@ const QuestionDisplay = ({
                             Question {currentIndex + 1} of {totalQuestions}
                         </div>
                     </div>
+                    {isMultiplayer && (
+                        <div className="multiplayer-status">
+                            <div className="players-progress">
+                                {answeredPlayers} / {totalPlayers} players answered
+                            </div>
+                            {isHost && (
+                                <div className="host-indicator">
+                                    🎮 You are the host
+                                </div>
+                            )}
+                        </div>
+                    )}
                     <div className="timer-section">
                         <div className={`timer ${timeLeft <= 10 ? 'warning' : ''}`}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -153,27 +166,53 @@ const QuestionDisplay = ({
                     </div>
 
                     {/* HOST: Next Question */}
-                    {isMultiplayer && isHost && answeredPlayers >= totalPlayers && (
-                        <button className="next-button" onClick={onNext}>
-                            Next Question
-                        </button>
+                    {isMultiplayer && isHost && (
+                        <>
+                            {/* Submit Answer Button */}
+                            {!isAnswered && (
+                                <button
+                                    className="next-button"
+                                    onClick={handleSubmit}
+                                    disabled={selectedAnswers.length === 0}
+                                >
+                                    {isMultiChoice ? 'Submit Answers' : 'Submit Answer'}
+                                </button>
+                            )}
+
+                            {/* Next Question Button */}
+                            {isMultiplayer && isHost && isAnswered && answeredPlayers >= totalPlayers && (
+                                <button className="next-button host-next-button" onClick={onNext}>
+                                    {isLastQuestion ? 'Finish Quiz' : `Next Question (${answeredPlayers}/${totalPlayers})`}
+                                </button>
+                            )}
+
+                            {/* Waiting for other players */}
+                            {isAnswered && answeredPlayers < totalPlayers && (
+                                <div style={{ color: '#88e0ff', fontSize: '16px', fontWeight: '600' }}>
+                                    Waiting for players... ({answeredPlayers}/{totalPlayers})
+                                </div>
+                            )}
+                        </>
                     )}
 
                     {/* NON-HOST: Submit → Waiting */}
-                    {isMultiplayer && !isHost && !isAnswered && (
-                        <button
-                            className="next-button"
-                            onClick={handleSubmit}
-                            disabled={selectedAnswers.length === 0}
-                        >
-                            Submit Answer
-                        </button>
-                    )}
-
-                    {isMultiplayer && !isHost && isAnswered && (
-                        <div style={{ color: '#88e0ff', fontSize: '16px', fontWeight: '600' }}>
-                            Waiting for host… ({answeredPlayers}/{totalPlayers})
-                        </div>
+                    {isMultiplayer && !isHost && (
+                        <>
+                            {!isAnswered && (
+                                <button
+                                    className="next-button"
+                                    onClick={handleSubmit}
+                                    disabled={selectedAnswers.length === 0}
+                                >
+                                    {isMultiChoice ? 'Submit Answers' : 'Submit Answer'}
+                                </button>
+                            )}
+                            {isAnswered && (
+                                <div style={{ color: '#88e0ff', fontSize: '16px', fontWeight: '600' }}>
+                                    Waiting for host… ({answeredPlayers}/{totalPlayers})
+                                </div>
+                            )}
+                        </>
                     )}
 
                     {/* SINGLE PLAYER: Submit button */}
