@@ -6,13 +6,14 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
-
+using System.Diagnostics.CodeAnalysis;
 #nullable disable
 
 namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
     [Migration("20251007085747_NormalizeDatabaseSchema")]
+    [ExcludeFromCodeCoverage]
     partial class NormalizeDatabaseSchema
     {
         /// <inheritdoc />
