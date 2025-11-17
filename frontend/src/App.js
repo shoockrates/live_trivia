@@ -193,21 +193,23 @@ function App() {
     setShowProfile(false);
   };
 
-  const handleStartMultiplayerGame = (category, roomCode) => {
-    setSelectedCategory(category);
-    setMultiplayerGame({ roomCode, category });
-    setCurrentView('multiplayer-game');
-  };
+const handleStartMultiplayerGame = (category, roomCode) => {
+  console.log('Starting multiplayer game:', { category, roomCode });
+  setSelectedCategory(category);
+  setMultiplayerGame({ roomCode, category });
+  setCurrentView('multiplayer-game');
+};
 
-  const handleMultiplayerGameFinished = (results) => {
-    setCurrentView('multiplayer-results');
-    console.log('Multiplayer game finished:', results);
-  };
+const handleMultiplayerGameFinished = (results) => {
+  console.log('Multiplayer game finished:', results);
+  setCurrentView('multiplayer-game');
+  // TODO: Implement multiplayer results screen
+};
 
-  const handleBackToMultiplayerLobby = () => {
-    setCurrentView('multiplayer-lobby');
-    setMultiplayerGame(null);
-  };
+const handleBackToMultiplayerLobby = () => {
+  setCurrentView('multiplayer-lobby');
+  setMultiplayerGame(null);
+};
 
   // Load all questions once to derive categories
   useEffect(() => {

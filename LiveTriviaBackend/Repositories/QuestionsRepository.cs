@@ -46,12 +46,12 @@ namespace live_trivia.Repositories
             if (!string.IsNullOrWhiteSpace(category))
                 query = query.Where(q => EF.Functions.ILike(q.Category, category));
 
-            if (!string.IsNullOrWhiteSpace(difficulty))
+            // Only filter by difficulty if it's explicitly provided and not "any"
+            if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
                 query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
 
-            // Randomize and take only the requested count
             return await query
-                .OrderBy(_ => Guid.NewGuid()) // EF random order
+                .OrderBy(q => EF.Functions.Random())
                 .Take(count)
                 .ToListAsync();
         }

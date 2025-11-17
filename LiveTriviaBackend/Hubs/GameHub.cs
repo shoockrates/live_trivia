@@ -1,183 +1,238 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
-using live_trivia.Data;
+using live_trivia.Repositories;
 using live_trivia.Interfaces;
 
 namespace live_trivia.Hubs
 {
-    [Authorize] // Require authentication for all hub methods
+    [Authorize]
     public class GameHub : Hub
     {
         private readonly IGameService _gameService;
-        private readonly TriviaDbContext _context;
+        private readonly GamesRepository _gamesRepository;
 
-        public GameHub(IGameService gameService, TriviaDbContext context)
+        public GameHub(IGameService gameService, GamesRepository gamesRepository)
         {
             _gameService = gameService;
-            _context = context;
+            _gamesRepository = gamesRepository;
         }
 
         public async Task JoinGameRoom(string roomId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-
-            // Get player ID from claims
-            var playerIdClaim = Context.User?.FindFirst("playerId");
-            var playerName = Context.User?.Identity?.Name;
-
-            Console.WriteLine($"Player {playerName} (ID: {playerIdClaim?.Value}) joined room {roomId}");
-
-            // Notify other players that someone joined
-            var game = await _gameService.GetGameAsync(roomId);
-            if (game != null)
+            try
             {
-                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
-                await Clients.Group(roomId).SendAsync("PlayerJoined", new
+                await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+
+                // Get player ID from claims
+                var playerIdClaim = Context.User?.FindFirst("playerId");
+                var playerName = Context.User?.Identity?.Name;
+
+                if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
                 {
-                    PlayerId = Context.ConnectionId,
-                    PlayerName = playerName,
-                    Timestamp = DateTime.UtcNow,
-                    GameState = gameDetails
-                });
+                    await Clients.Caller.SendAsync("Error", "Player identity not found");
+                    return;
+                }
+
+                Console.WriteLine($"Player {playerName} (ID: {playerId}) joined room {roomId}");
+
+                // Get updated game state
+                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+                if (gameDetails != null)
+                {
+                    // Notify ALL players in the room about the updated game state
+                    await Clients.Group(roomId).SendAsync("PlayerJoined", new
+                    {
+                        Player = new { Id = playerId, Name = playerName },
+                        GameState = gameDetails,
+                        ConnectionId = Context.ConnectionId,
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("Error", "Game not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in JoinGameRoom: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", "Failed to join game room");
             }
         }
 
         public async Task LeaveGameRoom(string roomId)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-
-            var playerName = Context.User?.Identity?.Name;
-            Console.WriteLine($"Player {playerName} left room {roomId}");
-
-            await Clients.Group(roomId).SendAsync("PlayerLeft", new
+            try
             {
-                PlayerId = Context.ConnectionId,
-                PlayerName = playerName,
-                Timestamp = DateTime.UtcNow
-            });
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+
+                var playerName = Context.User?.Identity?.Name;
+                var playerIdClaim = Context.User?.FindFirst("playerId");
+
+                if (playerIdClaim != null && int.TryParse(playerIdClaim.Value, out int playerId))
+                {
+                    Console.WriteLine($"Player {playerName} (ID: {playerId}) left room {roomId}");
+
+                    // Get updated game state after player left
+                    var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+
+                    await Clients.Group(roomId).SendAsync("PlayerLeft", new
+                    {
+                        PlayerId = playerId,
+                        PlayerName = playerName,
+                        ConnectionId = Context.ConnectionId,
+                        Timestamp = DateTime.UtcNow,
+                        GameState = gameDetails // Include updated game state
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in LeaveGameRoom: {ex.Message}");
+            }
         }
 
         public async Task StartGame(string roomId)
         {
-            var playerIdClaim = Context.User?.FindFirst("playerId");
-            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            try
             {
-                await Clients.Caller.SendAsync("GameStartFailed", "Player identity not found");
-                return;
-            }
+                var playerIdClaim = Context.User?.FindFirst("playerId");
+                if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+                {
+                    await Clients.Caller.SendAsync("GameStartFailed", "Player identity not found");
+                    return;
+                }
 
-            var game = await _gameService.GetGameAsync(roomId);
-            if (game == null)
-            {
-                await Clients.Caller.SendAsync("GameStartFailed", "Game not found");
-                return;
-            }
+                var game = await _gameService.GetGameAsync(roomId);
+                if (game == null)
+                {
+                    await Clients.Caller.SendAsync("GameStartFailed", "Game not found");
+                    return;
+                }
 
-            // Check if player is host
-            if (game.HostPlayerId != playerId)
-            {
-                await Clients.Caller.SendAsync("GameStartFailed", "Only the host can start the game");
-                return;
-            }
+                // Check if player is host
+                if (game.HostPlayerId != playerId)
+                {
+                    await Clients.Caller.SendAsync("GameStartFailed", "Only the host can start the game");
+                    return;
+                }
 
-            var success = await _gameService.StartGameAsync(roomId);
-            if (success)
-            {
-                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
-                await Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
+                // Check if there are enough players
+                if (game.GamePlayers.Count < 1)
+                {
+                    await Clients.Caller.SendAsync("GameStartFailed", "Need at least 1 player to start");
+                    return;
+                }
+
+                var success = await _gameService.StartGameAsync(roomId);
+                if (success)
+                {
+                    var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+                    await Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
+                }
+                else
+                {
+                    await Clients.Caller.SendAsync("GameStartFailed", "Failed to start game. Ensure there are players and questions.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await Clients.Caller.SendAsync("GameStartFailed", "Failed to start game. Ensure there are players and questions.");
+                Console.WriteLine($"Error in StartGame: {ex.Message}");
+                await Clients.Caller.SendAsync("GameStartFailed", $"Error starting game: {ex.Message}");
             }
         }
 
         public async Task SubmitAnswer(string roomId, int questionId, List<int> selectedAnswers)
         {
-            var playerIdClaim = Context.User?.FindFirst("playerId");
-            var playerName = Context.User?.Identity?.Name;
-
-            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            try
             {
-                Console.WriteLine("Player identity not found in SubmitAnswer");
-                return;
-            }
+                var playerIdClaim = Context.User?.FindFirst("playerId");
+                var playerName = Context.User?.Identity?.Name;
 
-            Console.WriteLine($"Player {playerName} (ID: {playerId}) submitted answer for question {questionId}");
-
-            // Store the answer and notify others
-            var game = await _gameService.GetGameAsync(roomId);
-            if (game != null)
-            {
-                await Clients.Group(roomId).SendAsync("AnswerSubmitted", new
+                if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
                 {
-                    PlayerId = Context.ConnectionId,
-                    PlayerName = playerName,
-                    QuestionId = questionId,
-                    Timestamp = DateTime.UtcNow
-                });
+                    Console.WriteLine("Player identity not found in SubmitAnswer");
+                    return;
+                }
+
+                Console.WriteLine($"Player {playerName} (ID: {playerId}) submitted answer for question {questionId}");
+
+                // Store the answer and notify others
+                var game = await _gameService.GetGameAsync(roomId);
+                if (game != null)
+                {
+                    await Clients.Group(roomId).SendAsync("AnswerSubmitted", new
+                    {
+                        PlayerId = playerId,
+                        PlayerName = playerName,
+                        ConnectionId = Context.ConnectionId,
+                        QuestionId = questionId,
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in SubmitAnswer: {ex.Message}");
             }
         }
 
         public async Task NextQuestion(string roomId)
         {
-            var playerIdClaim = Context.User?.FindFirst("playerId");
-            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            try
             {
-                return;
-            }
-
-            var game = await _gameService.GetGameAsync(roomId);
-            if (game == null)
-            {
-                return;
-            }
-
-            // Only host can advance
-            if (game.HostPlayerId != playerId)
-            {
-                await Clients.Caller.SendAsync("Error", "Only the host can advance the game");
-                return;
-            }
-
-            // Score current question before moving
-            game.ScoreCurrentQuestion();
-            var moved = game.MoveNextQuestion();
-            await _gameService.SaveChangesAsync();
-
-            if (moved)
-            {
-                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
-                await Clients.Group(roomId).SendAsync("NextQuestion", gameDetails);
-            }
-            else
-            {
-                // Game finished
-                var leaderboard = game.GetLeaderboard();
-                await Clients.Group(roomId).SendAsync("GameFinished", new
+                var playerIdClaim = Context.User?.FindFirst("playerId");
+                if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
                 {
-                    Leaderboard = leaderboard,
-                    FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
-                });
-            }
-        }
+                    await Clients.Caller.SendAsync("Error", "Player identity not found");
+                    return;
+                }
 
-        public async Task UpdateGameSettings(string roomId, object settings)
-        {
-            var playerIdClaim = Context.User?.FindFirst("playerId");
-            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+                var game = await _gameService.GetGameAsync(roomId);
+                if (game == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Game not found");
+                    return;
+                }
+
+                // Only host can advance
+                if (game.HostPlayerId != playerId)
+                {
+                    await Clients.Caller.SendAsync("Error", "Only the host can advance the game");
+                    return;
+                }
+
+                // Score current question before moving
+                game.ScoreCurrentQuestion();
+                var moved = game.MoveNextQuestion();
+                await _gameService.SaveChangesAsync();
+
+                if (moved)
+                {
+                    // Get full game details with questions
+                    var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+
+                    // Broadcast to all players in the room
+                    await Clients.Group(roomId).SendAsync("NextQuestion", gameDetails);
+
+                    Console.WriteLine($"Broadcasted NextQuestion for room {roomId}, question index: {gameDetails.CurrentQuestionIndex}");
+                }
+                else
+                {
+                    // Game finished
+                    var leaderboard = game.GetLeaderboard();
+                    await Clients.Group(roomId).SendAsync("GameFinished", new
+                    {
+                        Leaderboard = leaderboard,
+                        FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
+                    });
+                }
+            }
+            catch (Exception ex)
             {
-                return;
+                Console.WriteLine($"Error in NextQuestion: {ex.Message}");
+                await Clients.Caller.SendAsync("Error", $"Error advancing to next question: {ex.Message}");
             }
-
-            var game = await _gameService.GetGameAsync(roomId);
-            if (game == null || game.HostPlayerId != playerId)
-            {
-                await Clients.Caller.SendAsync("Error", "Only the host can update settings");
-                return;
-            }
-
-            await Clients.Group(roomId).SendAsync("SettingsUpdated", settings);
         }
 
         public override async Task OnConnectedAsync()

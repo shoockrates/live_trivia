@@ -11,6 +11,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
   const [gameFinished, setGameFinished] = useState(false);
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isHost, setIsHost] = useState(false);
+  const [allQuestions, setAllQuestions] = useState([]); // Store all questions
   
   const listenersRegistered = useRef(false);
   const mounted = useRef(true);
@@ -40,16 +41,44 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
           
           setGameState(gameDetails);
           setHasAnswered(false);
-          setPlayerAnswers({}); // Reset answers for new question
+          setPlayerAnswers({});
           
-          if (gameDetails.currentQuestionIndex >= 0 && gameDetails.questions) {
-            const question = gameDetails.questions[gameDetails.currentQuestionIndex];
-            setCurrentQuestion({
-              text: question?.text || gameDetails.currentQuestionText,
-              answers: question?.answers || gameDetails.currentQuestionAnswers,
-              id: question?.id,
-              correctAnswerIndexes: question?.correctAnswerIndexes || []
-            });
+          // Update players from gameDetails
+          if (gameDetails.players) {
+            setPlayers(gameDetails.players);
+          }
+          
+          // Store all questions if available
+          if (gameDetails.questions && gameDetails.questions.length > 0) {
+            setAllQuestions(gameDetails.questions);
+          }
+          
+          // Set current question from the questions array
+          if (gameDetails.currentQuestionIndex >= 0) {
+            let question;
+            
+            // Try to get from questions array first
+            if (gameDetails.questions && gameDetails.questions[gameDetails.currentQuestionIndex]) {
+              question = gameDetails.questions[gameDetails.currentQuestionIndex];
+            }
+            
+            // If question exists, set it
+            if (question) {
+              setCurrentQuestion({
+                text: question.text,
+                answers: question.answers,
+                id: question.id,
+                correctAnswerIndexes: question.correctAnswerIndexes || []
+              });
+            } else {
+              // Fallback to individual fields
+              setCurrentQuestion({
+                text: gameDetails.currentQuestionText,
+                answers: gameDetails.currentQuestionAnswers,
+                id: null,
+                correctAnswerIndexes: []
+              });
+            }
           }
         };
 
@@ -104,22 +133,37 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         
         if (response.ok) {
           const gameDetails = await response.json();
+          console.log('Loaded game state:', gameDetails);
+          
           if (mounted.current) {
             setGameState(gameDetails);
             setPlayers(gameDetails.players || []);
             setIsHost(gameDetails.hostPlayerId === parseInt(user.playerId));
             
+            // Store all questions
+            if (gameDetails.questions && gameDetails.questions.length > 0) {
+              setAllQuestions(gameDetails.questions);
+            }
+            
             // Set current question if game is in progress
             if (gameDetails.state === 'InProgress' && 
-                gameDetails.currentQuestionIndex >= 0 && 
-                gameDetails.questions) {
-              const question = gameDetails.questions[gameDetails.currentQuestionIndex];
-              setCurrentQuestion({
-                text: question?.text,
-                answers: question?.answers,
-                id: question?.id,
-                correctAnswerIndexes: question?.correctAnswerIndexes || []
-              });
+                gameDetails.currentQuestionIndex >= 0) {
+              
+              let question;
+              
+              // Try to get from questions array
+              if (gameDetails.questions && gameDetails.questions[gameDetails.currentQuestionIndex]) {
+                question = gameDetails.questions[gameDetails.currentQuestionIndex];
+              }
+              
+              if (question) {
+                setCurrentQuestion({
+                  text: question.text,
+                  answers: question.answers,
+                  id: question.id,
+                  correctAnswerIndexes: question.correctAnswerIndexes || []
+                });
+              }
             }
           }
         }
@@ -146,7 +190,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         listenersRegistered.current = false;
       }
       
-      // Leave the room
       signalRService.leaveGameRoom(roomCode).catch(err => 
         console.error('Error leaving room:', err)
       );
@@ -157,36 +200,44 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     if (!currentQuestion || hasAnswered) return;
 
     try {
-      setHasAnswered(true);
-      
-      const selectedIndexes = Array.isArray(selectedIndex) ? selectedIndex : [selectedIndex];
-      
-      // Submit to API for persistence
-      const response = await fetch(`http://localhost:5216/games/${roomCode}/answer`, {
+        setHasAnswered(true);
+        
+        const selectedIndexes = Array.isArray(selectedIndex) ? selectedIndex : [selectedIndex];
+        
+        // Get the actual question ID from the current question in game state
+        const currentQuestionFromState = allQuestions[gameState.currentQuestionIndex];
+        const questionId = currentQuestionFromState?.id || currentQuestion.id;
+        
+        console.log('Submitting answer:', { questionId, selectedIndexes });
+
+        // Submit to API for persistence
+        const response = await fetch(`http://localhost:5216/games/${roomCode}/answer`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          questionId: currentQuestion.id,
-          selectedAnswerIndexes: selectedIndexes
+            questionId: questionId,
+            selectedAnswerIndexes: selectedIndexes
         })
-      });
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit answer to API');
-      }
+        if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to submit answer: ${errorText}`);
+        }
 
-      // Also notify via SignalR for real-time updates
-      await signalRService.submitAnswer(roomCode, currentQuestion.id, selectedIndexes);
-      
-      console.log('Answer submitted successfully');
-    } catch (error) {
-      console.error('Failed to submit answer:', error);
-      setHasAnswered(false); // Allow retry
-    }
-  };
+        const result = await response.json();
+        console.log('Answer submitted successfully:', result);
+
+        // Also notify via SignalR for real-time updates
+        await signalRService.submitAnswer(roomCode, questionId, selectedIndexes);    
+  } catch (error) {
+    console.error('Failed to submit answer:', error);
+    setHasAnswered(false);
+  }
+};
 
   const handleNextQuestion = async () => {
     if (!isHost) {
@@ -218,7 +269,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
   };
 
   const handleBack = () => {
-    // Cleanup will happen in useEffect cleanup
     onBack();
   };
 
@@ -257,10 +307,10 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
               return (
                 <div key={player.playerId || index} className="player-status">
                   <div className="player-avatar-small">
-                    {(player.name?.charAt(0) || player.username?.charAt(0) || 'P').toUpperCase()}
+                    {(player.name?.charAt(0) || 'P').toUpperCase()}
                   </div>
                   <div className="player-info">
-                    <span className="player-name">{player.name || player.username}</span>
+                    <span className="player-name">{player.name}</span>
                     <div className={`status-dot ${hasAnsweredQuestion ? 'answered' : 'waiting'}`} 
                          title={hasAnsweredQuestion ? 'Answered' : 'Waiting'} />
                   </div>
@@ -291,7 +341,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
           onAnswerSelect={handleAnswerSelect}
           onNext={handleNextQuestion}
           currentIndex={gameState.currentQuestionIndex || 0}
-          totalQuestions={gameState.totalQuestions || gameState.questions?.length || 0}
+          totalQuestions={allQuestions.length || gameState.totalQuestions || 0}
           correctCount={0}
           wrongCount={0}
           revealed={hasAnswered}

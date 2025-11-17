@@ -15,24 +15,33 @@ public class GameService : IGameService
     }
     public async Task<bool> StartGameAsync(string roomId)
     {
+
         var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true, includeQuestions: true);
         if (game == null || game.GamePlayers.Count < 1)
+        {
             return false;
+        }
 
         if (game.State == GameState.InProgress)
+        {
             return true;
-
+        }
         // Load game settings
         var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
         if (settings == null)
             return false;
+
+        Console.WriteLine($"=== DEBUG SETTINGS ===");
+        Console.WriteLine($"Category: '{settings.Category}'");
+        Console.WriteLine($"Difficulty: '{settings.Difficulty}'");
+        Console.WriteLine($"QuestionCount: {settings.QuestionCount}");
 
         // Fetch random questions from QuestionsRepository
         var questions = await _questionsRepo.GetRandomQuestionsAsync(settings.QuestionCount, settings.Category, settings.Difficulty);
 
         if (questions.Count < settings.QuestionCount)
         {
-            Console.WriteLine($"Not enough questions found. Requested {settings.QuestionCount}, got {questions.Count}.");
+
             return false;
         }
 
@@ -46,6 +55,7 @@ public class GameService : IGameService
         game.CurrentQuestionIndex = 0;
 
         await _gamesRepo.SaveChangesAsync();
+
         return true;
     }
 
@@ -54,7 +64,12 @@ public class GameService : IGameService
         if (string.IsNullOrWhiteSpace(roomId))
             throw new ArgumentException("RoomId cannot be null or empty.", nameof(roomId));
 
-        var game = await _gamesRepo.GetGameAsync(roomId);
+        var game = await _gamesRepo.GetGameAsync(
+                roomId,
+                true,
+                true
+        );
+
         return game;
     }
 
@@ -89,9 +104,20 @@ public class GameService : IGameService
                 Name = gp.Player.Name,
                 CurrentScore = gp.Player.Score,
                 HasSubmittedAnswer = currentAnswers.Any(pa => pa.PlayerId == gp.PlayerId)
+            }).ToList(),
+            // Add questions to the DTO
+            Questions = questions.Select(q => new QuestionDto
+            {
+                Id = q.Id,
+                Text = q.Text,
+                Answers = q.Answers,
+                CorrectAnswerIndexes = q.CorrectAnswerIndexes,
+                Category = q.Category,
+                Difficulty = q.Difficulty
             }).ToList()
         };
     }
+
     public async Task<GameSettings?> GetGameSettingsAsync(string roomId)
     {
         return await _gamesRepo.GetGameSettingsAsync(roomId);
@@ -102,14 +128,30 @@ public class GameService : IGameService
         var game = new Game
         {
             RoomId = roomId,
+            HostPlayerId = hostPlayer.Id,
             HostPlayer = hostPlayer,
             State = GameState.WaitingForPlayers,
             CreatedAt = DateTime.UtcNow
         };
+
         await _gamesRepo.AddSync(game);
         await _gamesRepo.SaveChangesAsync();
+
+        // Create default game settings
+        var settings = new GameSettings
+        {
+            GameRoomId = roomId,
+            Category = "any",
+            Difficulty = "medium",
+            QuestionCount = 10,
+            TimeLimitSeconds = 30
+        };
+
+        await _gamesRepo.AddGameSettings(settings);
+
         return game;
     }
+
     public async Task<GameSettings> UpdateGameSettingsAsync(string roomId, GameSettingsDto dto)
     {
         var game = await _gamesRepo.GetGameAsync(roomId);
@@ -160,5 +202,5 @@ public class GameService : IGameService
     {
         await _gamesRepo.SaveChangesAsync();
     }
-        
+
 }
