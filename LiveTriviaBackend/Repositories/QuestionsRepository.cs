@@ -1,6 +1,7 @@
 using live_trivia;
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
+using live_trivia.Extensions;
 
 namespace live_trivia.Repositories
 {
@@ -34,8 +35,9 @@ namespace live_trivia.Repositories
         // Get questions by category (case-insensitive, PostgreSQL ILIKE)
         public async Task<List<Question>> GetByCategoryAsync(string category)
         {
+            string normalized = category.ToLower().CapitalizeFirstLetter();
             return await _context.Questions
-                .Where(q => EF.Functions.ILike(q.Category, category))
+                .Where(q => q.Category == normalized)
                 .ToListAsync();
         }
 
@@ -44,10 +46,16 @@ namespace live_trivia.Repositories
             var query = _context.Questions.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(category))
-                query = query.Where(q => EF.Functions.ILike(q.Category, category));
-
+            {
+                string normalized = category.ToLower().CapitalizeFirstLetter();
+                query = query.Where(q => q.Category == normalized);
+            }
+            
             if (!string.IsNullOrWhiteSpace(difficulty))
-                query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
+            {
+                string normalized = difficulty.ToLower();
+                query = query.Where(q => q.Difficulty.ToLower() == normalized);
+            }
 
             // Randomize and take only the requested count
             return await query
