@@ -38,6 +38,160 @@ public class GameServiceTests
         // Now create the service with the required dependencies
         return new GameService(gamesRepo, questionsRepo);
     }
+    [Fact]
+    public async Task StartGameAsync_ShouldReturnFalse_WhenGameDoesNotExist()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        var result = await service.StartGameAsync("NonExistentRoom");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_ShouldReturnTrue_WhenGameAlreadyInProgress()
+    {
+        var db = GetInMemoryDb();
+        var createdGame = new Game { RoomId = "12345", State = GameState.InProgress };
+        createdGame.AddPlayer(new Player { Id = 1, Name = "TestPlayer" });
+        db.Games.Add(createdGame);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        var result = await service.StartGameAsync("12345");
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CreateGame_ShouldSetDefaultState()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        var newGame = new Game { RoomId = "67890" };
+        db.Games.Add(newGame);
+        await db.SaveChangesAsync();
+
+        var gameFromDb = await db.Games.FirstAsync(g => g.RoomId == "67890");
+        Assert.Equal(GameState.WaitingForPlayers, gameFromDb.State);
+        Assert.Equal(-1, gameFromDb.CurrentQuestionIndex);
+        Assert.Empty(gameFromDb.Questions);
+    }
+
+    [Fact]
+    public async Task CreateGame_ShouldSaveGameToRepository()
+    {
+        // Arrange
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        var hostPlayer = new Player { Id = 1, Name = "Host" };
+        db.Players.Add(hostPlayer);
+        await db.SaveChangesAsync();
+
+        // Act
+        var createdGame = await service.CreateGameAsync("67890", hostPlayer);
+
+        // Assert
+        var gameFromDb = await db.Games.FirstOrDefaultAsync(g => g.RoomId == "67890");
+        Assert.NotNull(gameFromDb);
+        Assert.Equal("67890", gameFromDb.RoomId);
+        Assert.Equal(hostPlayer.Id, gameFromDb.HostPlayerId!.Value);
+        Assert.Equal(GameState.WaitingForPlayers, gameFromDb.State);
+    }
+
+    [Fact]
+    public async Task GetGame_ShouldReturnGame_WhenExists()
+    {
+        var db = GetInMemoryDb();
+        var createdGame = new Game { RoomId = "12345" };
+        db.Games.Add(createdGame);
+        db.SaveChanges();
+
+        var service = CreateGameService(db);
+
+        var retrievedGame = await service.GetGameAsync("12345");
+
+        Assert.NotNull(retrievedGame);
+        Assert.Equal("12345", retrievedGame.RoomId);
+    }
+
+    [Fact]
+    public async Task GetGameByRoomId_ShouldReturnNull_WhenNotFound()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        var retrievedGame = await service.GetGameAsync("NonExistentRoom");
+
+        Assert.Null(retrievedGame);
+    }
+
+    [Fact]
+    public async Task StartGame_ShouldFail_WhenGameDoesNotExist()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        var result = await service.StartGameAsync("NonExistentRoom");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task StartGame_ShouldFail_WhenNotEnoughQuestionsAvailable()
+    {
+        // Arrange
+        var db = GetInMemoryDb();
+
+        // Create game
+        var createdGame = new Game { RoomId = "12345" };
+        db.Games.Add(createdGame);
+        await db.SaveChangesAsync();
+
+        // Players
+        var player1 = new Player { Id = 1, Name = "TestPlayer1" };
+        var player2 = new Player { Id = 2, Name = "TestPlayer2" };
+        db.Players.AddRange(player1, player2);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        // Add players to game
+        await service.AddExistingPlayerToGameAsync(createdGame, player1);
+        await service.AddExistingPlayerToGameAsync(createdGame, player2);
+        await db.SaveChangesAsync();
+
+        // Add settings that require more questions than exist
+        var settings = new GameSettings
+        {
+            GameRoomId = "12345",
+            Category = "Geography",
+            Difficulty = "Easy",
+            QuestionCount = 10,
+            TimeLimitSeconds = 20
+        };
+        db.GameSettings.Add(settings);
+        await db.SaveChangesAsync();
+
+        // Act
+        var result = await service.StartGameAsync("12345");
+
+        // Assert
+        Assert.False(result);
+
+        // Reload game to guarantee EF tracking is correct
+        var reloadedGame = await db.Games
+            .Include(g => g.Questions)
+            .FirstAsync(g => g.RoomId == "12345");
+
+        Assert.Equal(GameState.WaitingForPlayers, reloadedGame.State);
+        Assert.Equal(-1, reloadedGame.CurrentQuestionIndex);
+        Assert.Empty(reloadedGame.Questions);
+    }
 
     [Fact]
     public async Task StartGameAsync_ShouldReturnFalse_WhenNoPlayers()
@@ -116,5 +270,54 @@ public class GameServiceTests
         Assert.NotNull(createdGame.StartedAt);
         Assert.Equal(settings.QuestionCount, createdGame.Questions.Count);
         Assert.True(result);
+    }
+    [Fact]
+    public async Task GetGameDetailsAsync_ReturnsNullWhenGameDoesNotExist()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        var gameDetails = await service.GetGameDetailsAsync("NonExistentRoom");
+
+        Assert.Null(gameDetails);
+    }
+
+    public async Task GetGameDetailsAsync_ReturnsGameDetails_WhenGameExists()
+    {
+        var db = GetInMemoryDb();
+        var createdGame = new Game { RoomId = "12345" };
+        db.Games.Add(createdGame);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        var gameDetails = await service.GetGameDetailsAsync("12345");
+
+        Assert.NotNull(gameDetails);
+        Assert.Equal("12345", gameDetails!.RoomId);
+    }
+
+    [Fact]
+    public async Task UpdateGameSettingsAsync_Fails_WhenGameInProgress()
+    {
+        var db = GetInMemoryDb();
+        var createdGame = new Game { RoomId = "12345", State = GameState.InProgress };
+        db.Games.Add(createdGame);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        var settingsDto = new live_trivia.Dtos.GameSettingsDto
+        {
+            Category = "History",
+            Difficulty = "Hard",
+            QuestionCount = 10,
+            TimeLimitSeconds = 30
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await service.UpdateGameSettingsAsync("12345", settingsDto);
+        });
     }
 }
