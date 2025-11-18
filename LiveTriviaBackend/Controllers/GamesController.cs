@@ -111,7 +111,21 @@ namespace live_trivia.Controllers
             await _gameService.SaveChangesAsync();
 
             if (!moved)
+            {
+                // Game finished - broadcast to all clients
+                var leaderboard = game.GetLeaderboard();
+                await _hubContext.Clients.Group(roomId).SendAsync("GameFinished", new
+                {
+                    Leaderboard = leaderboard,
+                    FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
+                });
+
                 return Ok(new { message = "Game finished.", state = game.State.ToString() });
+            }
+
+            // Broadcast the next question to all clients
+            var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+            await _hubContext.Clients.Group(roomId).SendAsync("NextQuestion", gameDetails);
 
             return Ok(new { message = "Moved to next question.", questionIndex = game.CurrentQuestionIndex });
         }
@@ -192,6 +206,7 @@ namespace live_trivia.Controllers
 
             return Ok(playerAnswer);
         }
+
         [HttpGet("{roomId}/settings")]
         [Authorize]
         public async Task<IActionResult> GetSettings(string roomId)
