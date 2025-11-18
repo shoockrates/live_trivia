@@ -389,21 +389,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     </div>
                 </div>
 
-                {isHost && selectedCategory && (
-                    <div style={{
-                        background: 'rgba(255, 215, 0, 0.1)',
-                        color: 'gold',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        textAlign: 'center',
-                        marginBottom: '10px',
-                        border: '1px solid gold'
-                    }}>
-                        Debug: Checking questions for "{selectedCategory}"...
-                    </div>
-                )}
-
                 <div className="connection-status">
                     <div className={`status-indicator ${connectionStatus}`}>
                         {connectionStatus === 'connected' ? '🟢 Connected' :

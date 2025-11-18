@@ -33,12 +33,9 @@ namespace live_trivia.Repositories
         // Get questions by category (case-insensitive)
         public async Task<List<Question>> GetByCategoryAsync(string category)
         {
-<<<<<<< HEAD
-=======
             string normalized = NormalizeCategoryName(category);
->>>>>>> b1bc474 (Fixed Arts & Literature category not working)
             return await _context.Questions
-                .Where(q => q.Category == category)
+                .Where(q => EF.Functions.ILike(q.Category, normalized))
                 .ToListAsync();
         }
 
@@ -48,23 +45,15 @@ namespace live_trivia.Repositories
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-<<<<<<< HEAD
-                // Use case-insensitive matching for category
-                query = query.Where(q => EF.Functions.ILike(q.Category, category));
-=======
                 string normalizedCategory = NormalizeCategoryName(category);
-                query = query.Where(q => q.Category == normalizedCategory);
->>>>>>> b1bc474 (Fixed Arts & Literature category not working)
+                query = query.Where(q => EF.Functions.ILike(q.Category, normalizedCategory));
             }
 
             // Only filter by difficulty if it's explicitly provided and not "any"
             if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
             {
                 query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
-<<<<<<< HEAD
             }
-=======
->>>>>>> b1bc474 (Fixed Arts & Literature category not working)
 
             return await query
                 .OrderBy(q => EF.Functions.Random())
