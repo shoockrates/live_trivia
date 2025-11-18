@@ -239,8 +239,8 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         setError('');
 
         try {
-            console.log('Starting game with category:', selectedCategory, 'Players:', players.length);
-
+            console.log('Selected category:', selectedCategory);
+            console.log('Available categories:', categories);
             // First, let's check ALL questions to see what categories exist
             const allQuestionsResponse = await fetch(`${API_BASE}/questions`, {
                 headers: {

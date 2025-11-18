@@ -24,15 +24,19 @@ namespace live_trivia.Repositories
             var count = await _context.Questions.CountAsync();
             if (count == 0) return null;
 
-            var rand = new Random(); // consider making Random static to avoid repeated seed problems
+            var rand = new Random();
             int index = rand.Next(count);
 
             return await _context.Questions.Skip(index).FirstOrDefaultAsync();
         }
 
-        // Get questions by category (case-insensitive, PostgreSQL ILIKE)
+        // Get questions by category (case-insensitive)
         public async Task<List<Question>> GetByCategoryAsync(string category)
         {
+<<<<<<< HEAD
+=======
+            string normalized = NormalizeCategoryName(category);
+>>>>>>> b1bc474 (Fixed Arts & Literature category not working)
             return await _context.Questions
                 .Where(q => q.Category == category)
                 .ToListAsync();
@@ -44,20 +48,41 @@ namespace live_trivia.Repositories
 
             if (!string.IsNullOrWhiteSpace(category))
             {
+<<<<<<< HEAD
                 // Use case-insensitive matching for category
                 query = query.Where(q => EF.Functions.ILike(q.Category, category));
+=======
+                string normalizedCategory = NormalizeCategoryName(category);
+                query = query.Where(q => q.Category == normalizedCategory);
+>>>>>>> b1bc474 (Fixed Arts & Literature category not working)
             }
 
             // Only filter by difficulty if it's explicitly provided and not "any"
             if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
             {
                 query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
+<<<<<<< HEAD
             }
+=======
+>>>>>>> b1bc474 (Fixed Arts & Literature category not working)
 
             return await query
                 .OrderBy(q => EF.Functions.Random())
                 .Take(count)
                 .ToListAsync();
+        }
+
+        // Helper method to normalize category names
+        private string NormalizeCategoryName(string category)
+        {
+            if (string.IsNullOrWhiteSpace(category))
+                return category;
+
+            // Convert to lowercase and trim
+            category = category.Trim().ToLower();
+
+            // Capitalize first letter of each word for general cases
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(category);
         }
 
         // Load new questions from file

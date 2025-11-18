@@ -2,7 +2,7 @@ namespace live_trivia.Services;
 using live_trivia.Repositories;
 using live_trivia.Dtos;
 using live_trivia.Interfaces;
-using live_trivia.Extensions;
+
 public class GameService : IGameService
 {
     private readonly GamesRepository _gamesRepo;
@@ -13,9 +13,9 @@ public class GameService : IGameService
         _gamesRepo = gamesRepo;
         _questionsRepo = questionsRepo;
     }
+
     public async Task<bool> StartGameAsync(string roomId)
     {
-
         var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true, includeQuestions: true);
         if (game == null || game.GamePlayers.Count < 1)
         {
@@ -26,15 +26,12 @@ public class GameService : IGameService
         {
             return true;
         }
+
         // Load game settings
         var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
         if (settings == null || string.IsNullOrWhiteSpace(settings.Category) || settings.QuestionCount <= 0)
             return false;
 
-        Console.WriteLine($"=== DEBUG SETTINGS ===");
-        Console.WriteLine($"Category: '{settings.Category}'");
-        Console.WriteLine($"Difficulty: '{settings.Difficulty}'");
-        Console.WriteLine($"QuestionCount: {settings.QuestionCount}");
 
         // Fetch random questions from QuestionsRepository
         var questions = await _questionsRepo.GetRandomQuestionsAsync(settings.QuestionCount, settings.Category, settings.Difficulty);
@@ -42,7 +39,6 @@ public class GameService : IGameService
         if (questions.Count < settings.QuestionCount)
         {
             throw new Exceptions.NotEnoughQuestionsException(settings.Category!, settings.QuestionCount);
-
         }
 
         // Replace previous questions
@@ -105,7 +101,6 @@ public class GameService : IGameService
                 CurrentScore = gp.Player.Score,
                 HasSubmittedAnswer = currentAnswers.Any(pa => pa.PlayerId == gp.PlayerId)
             }).ToList(),
-            // Add questions to the DTO
             Questions = questions.Select(q => new QuestionDto
             {
                 Id = q.Id,
@@ -165,9 +160,12 @@ public class GameService : IGameService
             await _gamesRepo.AddGameSettings(settings);
         }
 
-        settings.Category = string.IsNullOrWhiteSpace(dto.Category)
+        // Normalize category name before saving
+        string normalizedCategory = NormalizeCategoryName(dto.Category);
+
+        settings.Category = string.IsNullOrWhiteSpace(normalizedCategory)
             ? "Geography"
-            : dto.Category.ToLower().CapitalizeFirstLetter();
+            : normalizedCategory;
 
         settings.Difficulty = string.IsNullOrWhiteSpace(dto.Difficulty)
             ? "medium"
@@ -176,6 +174,19 @@ public class GameService : IGameService
         settings.TimeLimitSeconds = dto.TimeLimitSeconds > 0 ? dto.TimeLimitSeconds : 15;
         await _gamesRepo.SaveChangesAsync();
         return settings;
+    }
+
+    // Helper method to normalize category names (consistent with QuestionsRepository)
+    private string NormalizeCategoryName(string category)
+    {
+        if (string.IsNullOrWhiteSpace(category))
+            return category;
+
+        // Convert to lowercase and trim
+        category = category.Trim().ToLower();
+
+        // Capitalize first letter of each word for general cases
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(category);
     }
 
     public async Task<Player?> GetPlayerByIdAsync(int playerId)
@@ -202,5 +213,4 @@ public class GameService : IGameService
     {
         await _gamesRepo.SaveChangesAsync();
     }
-
 }
