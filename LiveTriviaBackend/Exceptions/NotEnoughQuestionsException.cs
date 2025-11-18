@@ -1,14 +1,13 @@
 namespace live_trivia.Exceptions;
-
-public class NotEnoughQuestionsException : Exception
+public class NotEnoughQuestionsException : TriviaException
 {
     public string Category { get; }
     public int RequiredCount { get; }
 
-    public NotEnoughQuestionsException(string category, int required)
-        : base($"Not enough questions available in category '{category}'. Required: {required}.")
+    public NotEnoughQuestionsException(string category, int requestedCount)
+        : base($"Could not find {requestedCount} questions for category '{category}'.", 400)
     {
         Category = category;
-        RequiredCount = required;
+        RequiredCount = requestedCount;
     }
 }
