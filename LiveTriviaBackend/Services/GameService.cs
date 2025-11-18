@@ -7,11 +7,14 @@ public class GameService : IGameService
 {
     private readonly GamesRepository _gamesRepo;
     private readonly QuestionsRepository _questionsRepo;
+    private readonly IActiveGamesService _activeGamesService;
 
-    public GameService(GamesRepository gamesRepo, QuestionsRepository questionsRepo)
+    public GameService(GamesRepository gamesRepo, QuestionsRepository questionsRepo, IActiveGamesService activeGamesService)
     {
         _gamesRepo = gamesRepo;
         _questionsRepo = questionsRepo;
+        _activeGamesService = activeGamesService;
+
     }
 
     public async Task<bool> StartGameAsync(string roomId)
@@ -136,6 +139,8 @@ public class GameService : IGameService
 
         await _gamesRepo.AddSync(game);
         await _gamesRepo.SaveChangesAsync();
+
+        _activeGamesService.TryAddGame(roomId);
 
         // Create default game settings
         var settings = new GameSettings

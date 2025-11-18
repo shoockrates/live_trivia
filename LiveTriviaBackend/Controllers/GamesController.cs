@@ -1,10 +1,8 @@
-using live_trivia.Repositories;
 using live_trivia.Dtos;
 using live_trivia.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
-using live_trivia.Services;
 using live_trivia.Interfaces;
 using live_trivia.Exceptions;
 using Serilog;
@@ -17,11 +15,13 @@ namespace live_trivia.Controllers
     {
         private readonly IHubContext<GameHub> _hubContext;
         private readonly IGameService _gameService;
+        private readonly IActiveGamesService _activeGamesService;
 
-        public GamesController(IGameService gameService, IHubContext<GameHub> hubContext)
+        public GamesController(IGameService gameService, IHubContext<GameHub> hubContext, IActiveGamesService activeGamesService)
         {
             _gameService = gameService;
             _hubContext = hubContext;
+            _activeGamesService = activeGamesService;
         }
 
         [HttpGet("{roomId}")]
@@ -232,7 +232,6 @@ namespace live_trivia.Controllers
             if (game == null)
                 return NotFound("Game not found");
 
-            // 1. SECURELY GET PLAYER ID from JWT Claim
             var playerIdClaim = User.FindFirst("playerId");
             if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
             {
@@ -245,6 +244,13 @@ namespace live_trivia.Controllers
 
             var updated = await _gameService.UpdateGameSettingsAsync(roomId, dto);
             return Ok(updated);
+        }
+
+        [HttpGet("active")]
+        public IActionResult GetActiveGames()
+        {
+            var activeGames = _activeGamesService.GetActiveGameIds();
+            return Ok(activeGames);
         }
 
     }
