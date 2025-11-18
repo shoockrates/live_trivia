@@ -3,6 +3,7 @@ using live_trivia.Data;
 using live_trivia.Services;
 using live_trivia.Repositories;
 using live_trivia;
+using live_trivia.Exceptions;
 
 public class GameServiceTests
 {
@@ -147,12 +148,10 @@ public class GameServiceTests
         // Arrange
         var db = GetInMemoryDb();
 
-        // Create game
         var createdGame = new Game { RoomId = "12345" };
         db.Games.Add(createdGame);
         await db.SaveChangesAsync();
 
-        // Players
         var player1 = new Player { Id = 1, Name = "TestPlayer1" };
         var player2 = new Player { Id = 2, Name = "TestPlayer2" };
         db.Players.AddRange(player1, player2);
@@ -160,12 +159,10 @@ public class GameServiceTests
 
         var service = CreateGameService(db);
 
-        // Add players to game
         await service.AddExistingPlayerToGameAsync(createdGame, player1);
         await service.AddExistingPlayerToGameAsync(createdGame, player2);
         await db.SaveChangesAsync();
 
-        // Add settings that require more questions than exist
         var settings = new GameSettings
         {
             GameRoomId = "12345",
@@ -177,20 +174,10 @@ public class GameServiceTests
         db.GameSettings.Add(settings);
         await db.SaveChangesAsync();
 
-        // Act
-        var result = await service.StartGameAsync("12345");
-
-        // Assert
-        Assert.False(result);
-
-        // Reload game to guarantee EF tracking is correct
-        var reloadedGame = await db.Games
-            .Include(g => g.Questions)
-            .FirstAsync(g => g.RoomId == "12345");
-
-        Assert.Equal(GameState.WaitingForPlayers, reloadedGame.State);
-        Assert.Equal(-1, reloadedGame.CurrentQuestionIndex);
-        Assert.Empty(reloadedGame.Questions);
+        // Act & Assert: expect NotEnoughQuestionsException
+        await Assert.ThrowsAsync<NotEnoughQuestionsException>(() =>
+            service.StartGameAsync("12345")
+        );
     }
 
     [Fact]

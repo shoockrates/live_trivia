@@ -28,7 +28,7 @@ public class GameService : IGameService
         }
         // Load game settings
         var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
-        if (settings == null)
+        if (settings == null || string.IsNullOrWhiteSpace(settings.Category) || settings.QuestionCount <= 0)
             return false;
 
         Console.WriteLine($"=== DEBUG SETTINGS ===");
@@ -41,8 +41,7 @@ public class GameService : IGameService
 
         if (questions.Count < settings.QuestionCount)
         {
-
-            return false;
+            throw new Exceptions.NotEnoughQuestionsException(settings.Category!, settings.QuestionCount);
         }
 
         // Replace previous questions
