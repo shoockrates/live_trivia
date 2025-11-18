@@ -35,9 +35,8 @@ namespace live_trivia.Repositories
         // Get questions by category (case-insensitive, PostgreSQL ILIKE)
         public async Task<List<Question>> GetByCategoryAsync(string category)
         {
-            string normalized = category.ToLower().CapitalizeFirstLetter();
             return await _context.Questions
-                .Where(q => q.Category == normalized)
+                .Where(q => q.Category == category)
                 .ToListAsync();
         }
 
@@ -47,14 +46,12 @@ namespace live_trivia.Repositories
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                string normalized = category.ToLower().CapitalizeFirstLetter();
-                query = query.Where(q => q.Category == normalized);
+                query = query.Where(q => q.Category == category);
             }
             
-            if (!string.IsNullOrWhiteSpace(difficulty))
+            if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
             {
-                string normalized = difficulty.ToLower();
-                query = query.Where(q => q.Difficulty.ToLower() == normalized);
+                query = query.Where(q => q.Difficulty == difficulty);
             }
 
             return await query
