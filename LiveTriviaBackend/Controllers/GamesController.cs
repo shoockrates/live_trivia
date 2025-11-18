@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using live_trivia.Services;
 using live_trivia.Interfaces;
+using live_trivia.Exceptions;
+using Serilog;
 
 namespace live_trivia.Controllers
 {
@@ -59,16 +61,31 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> StartGame(string roomId)
         {
-            var success = await _gameService.StartGameAsync(roomId);
+            try
+            {
+                var success = await _gameService.StartGameAsync(roomId);
 
-            if (!success)
-                return BadRequest("Game could not be started. Make sure there are players and questions.");
+                if (!success)
+                    return BadRequest("Game could not be started. Make sure there are players and questions.");
 
-            // Notify all clients
-            var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
-            await _hubContext.Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
+                // Notify all clients
+                var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+                await _hubContext.Clients.Group(roomId).SendAsync("GameStarted", gameDetails);
 
-            return Ok(new { message = "Game started successfully." });
+                return Ok(new { message = "Game started successfully." });
+            }
+            catch (NotEnoughQuestionsException ex)
+            {
+                Log.Error(ex,
+                    "Failed to start game for room {RoomId}: Not enough questions in category {Category}. Needed {Count}.",
+                    roomId, ex.Category, ex.RequiredCount);
+                return BadRequest(new
+                {
+                    message = $"Not enough questions available.",
+                    category = ex.Category,
+                    required = ex.RequiredCount
+                });
+            }
         }
 
         [HttpPost("{roomId}/next")]
