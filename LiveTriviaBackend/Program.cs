@@ -59,6 +59,8 @@ builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 
+builder.Services.AddSingleton<IActiveGamesService, ActiveGamesService>();
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

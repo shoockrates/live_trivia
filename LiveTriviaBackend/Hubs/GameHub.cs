@@ -10,11 +10,13 @@ namespace live_trivia.Hubs
     {
         private readonly IGameService _gameService;
         private readonly GamesRepository _gamesRepository;
+        private readonly IActiveGamesService _activeGamesService;
 
-        public GameHub(IGameService gameService, GamesRepository gamesRepository)
+        public GameHub(IGameService gameService, GamesRepository gamesRepository, IActiveGamesService activeGamesService)
         {
             _gameService = gameService;
             _gamesRepository = gamesRepository;
+            _activeGamesService = activeGamesService;
         }
 
         public async Task JoinGameRoom(string roomId)
