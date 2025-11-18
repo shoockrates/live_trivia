@@ -1,4 +1,5 @@
 namespace live_trivia.Dtos;
+
 public record GameDetailsDto
 {
     public string RoomId { get; init; } = string.Empty;
@@ -12,4 +13,5 @@ public record GameDetailsDto
     public int CurrentQuestionIndex { get; init; }
     public int TotalQuestions { get; init; }
     public List<GamePlayerDto> Players { get; init; } = new();
+    public List<QuestionDto> Questions { get; init; } = new();
 }

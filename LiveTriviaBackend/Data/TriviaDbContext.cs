@@ -215,6 +215,24 @@ namespace live_trivia.Data
                     .HasForeignKey(cs => cs.PlayerStatisticsId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
+            // Configure GameSettings table
+            modelBuilder.Entity<GameSettings>(entity =>
+            {
+                entity.HasKey(gs => gs.Id);
+                entity.Property(gs => gs.Id).ValueGeneratedOnAdd();
+                entity.Property(gs => gs.GameRoomId).IsRequired().HasMaxLength(50);
+
+                // Unique index - one settings per game
+                entity.HasIndex(gs => gs.GameRoomId).IsUnique();
+
+                // Relationship with Game
+                entity.HasOne(gs => gs.Game)
+                    .WithOne()
+                    .HasForeignKey<GameSettings>(gs => gs.GameRoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
         }
     }
 }

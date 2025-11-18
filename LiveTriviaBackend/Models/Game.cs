@@ -59,23 +59,16 @@ public class Game : BaseEntity
 
     public bool MoveNextQuestion()
     {
-        if (CurrentQuestionIndex + 1 < Questions.Count)
+        if (CurrentQuestionIndex >= Questions.Count - 1)
         {
-            CurrentQuestionIndex++;
-            if (State == GameState.WaitingForPlayers)
-            {
-                State = GameState.InProgress;
-                StartedAt = DateTime.UtcNow;
-            }
-
-            return true;
-        }
-        else
-        {
+            // Game finished
             State = GameState.Finished;
             EndedAt = DateTime.UtcNow;
             return false;
         }
+
+        CurrentQuestionIndex++;
+        return true;
     }
 
     public void ScoreCurrentQuestion()

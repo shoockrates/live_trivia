@@ -1,7 +1,5 @@
-using live_trivia;
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
-using live_trivia.Extensions;
 
 namespace live_trivia.Repositories
 {
@@ -26,18 +24,18 @@ namespace live_trivia.Repositories
             var count = await _context.Questions.CountAsync();
             if (count == 0) return null;
 
-            var rand = new Random(); // consider making Random static to avoid repeated seed problems
+            var rand = new Random();
             int index = rand.Next(count);
 
             return await _context.Questions.Skip(index).FirstOrDefaultAsync();
         }
 
-        // Get questions by category (case-insensitive, PostgreSQL ILIKE)
+        // Get questions by category (case-insensitive)
         public async Task<List<Question>> GetByCategoryAsync(string category)
         {
-            string normalized = category.ToLower().CapitalizeFirstLetter();
+            string normalized = NormalizeCategoryName(category);
             return await _context.Questions
-                .Where(q => q.Category == normalized)
+                .Where(q => EF.Functions.ILike(q.Category, normalized))
                 .ToListAsync();
         }
 
@@ -47,21 +45,33 @@ namespace live_trivia.Repositories
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                string normalized = category.ToLower().CapitalizeFirstLetter();
-                query = query.Where(q => q.Category == normalized);
-            }
-            
-            if (!string.IsNullOrWhiteSpace(difficulty))
-            {
-                string normalized = difficulty.ToLower();
-                query = query.Where(q => q.Difficulty.ToLower() == normalized);
+                string normalizedCategory = NormalizeCategoryName(category);
+                query = query.Where(q => EF.Functions.ILike(q.Category, normalizedCategory));
             }
 
-            // Randomize and take only the requested count
+            // Only filter by difficulty if it's explicitly provided and not "any"
+            if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
+            {
+                query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
+            }
+
             return await query
-                .OrderBy(_ => Guid.NewGuid()) // EF random order
+                .OrderBy(q => EF.Functions.Random())
                 .Take(count)
                 .ToListAsync();
+        }
+
+        // Helper method to normalize category names
+        private string NormalizeCategoryName(string category)
+        {
+            if (string.IsNullOrWhiteSpace(category))
+                return category;
+
+            // Convert to lowercase and trim
+            category = category.Trim().ToLower();
+
+            // Capitalize first letter of each word for general cases
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(category);
         }
 
         // Load new questions from file
