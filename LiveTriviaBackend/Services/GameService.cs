@@ -17,16 +17,18 @@ public class GameService : IGameService
     public async Task<bool> StartGameAsync(string roomId)
     {
         var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true, includeQuestions: true);
-        if (game == null || game.GamePlayers.Count < 1)
-        {
-            return false;
-        }
+        if (game == null)
+            throw new Exceptions.GameNotFoundException(roomId);
 
         if (game.State == GameState.InProgress)
         {
             return true;
         }
 
+        if (game.GamePlayers.Count < 1)
+        {
+            throw new Exceptions.GameStateException("At least one player is required to start the game.");
+        }
         // Load game settings
         var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
         if (settings == null || string.IsNullOrWhiteSpace(settings.Category) || settings.QuestionCount <= 0)
@@ -72,7 +74,10 @@ public class GameService : IGameService
     public async Task<GameDetailsDto?> GetGameDetailsAsync(string roomId)
     {
         var game = await _gamesRepo.GetGameDetailsAsync(roomId);
-        if (game == null) return null;
+        if (game == null)
+        {
+            throw new Exceptions.GameNotFoundException(roomId);
+        }
 
         var questions = game.Questions.ToList();
         var currentQuestion = (game.CurrentQuestionIndex >= 0 && game.CurrentQuestionIndex < questions.Count)
@@ -151,7 +156,7 @@ public class GameService : IGameService
     {
         var game = await _gamesRepo.GetGameAsync(roomId);
         if (game?.State == GameState.InProgress)
-            throw new InvalidOperationException("Cannot change settings after game started.");
+            throw new Exceptions.GameStateException("Cannot change settings after game started.");
 
         var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
         if (settings == null)
@@ -196,9 +201,13 @@ public class GameService : IGameService
 
     public async Task AddExistingPlayerToGameAsync(Game game, Player player)
     {
-        if (game == null || player == null)
+        if (game == null)
         {
-            throw new ArgumentNullException("Game and Player must not be null.");
+            throw new Exceptions.GameNotFoundException("Game must not be null.");
+        }
+        if (player == null)
+        {
+            throw new Exceptions.GameStateException("Player must not be null.");
         }
 
         var gamePlayer = new GamePlayer

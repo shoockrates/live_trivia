@@ -24,7 +24,7 @@ public class AuthService : IAuthService
     {
         // Check if username already exists
         if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-            throw new Exception("Username already exists.");
+            throw new Exceptions.UsernameAlreadyExistsException(request.Username);
 
         // Create player profile
         var player = new Player { Name = request.Username, Score = 0 };
