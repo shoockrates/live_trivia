@@ -2,12 +2,14 @@ using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
 using live_trivia.Dtos;
 using live_trivia.Interfaces;
+using live_trivia.Utilities;
 
 namespace live_trivia.Services
 {
     public class StatisticsService : IStatisticsService
     {
         private readonly TriviaDbContext _context;
+        private readonly CollectionProjector<CategoryStatistics> _categoryProjector = new();
 
         public StatisticsService(TriviaDbContext context)
         {
@@ -127,9 +129,10 @@ namespace live_trivia.Services
                 return new PlayerStatsResponse();
             }
 
-            var categoryStats = stats.CategoryStatistics
-                .OrderByDescending(cs => cs.GamesPlayed)
-                .Select(cs => new CategoryStat
+            var categoryStats = _categoryProjector.Project<CategoryStat, int>(
+                stats.CategoryStatistics,
+                cs => cs.GamesPlayed,
+                cs => new CategoryStat
                 {
                     Category = cs.Category,
                     GamesPlayed = cs.GamesPlayed,
