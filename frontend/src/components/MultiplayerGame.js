@@ -25,15 +25,12 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         return () => { mounted.current = false; };
     }, []);
 
-    // Game finished handler - moved to component scope so it can be reused
+    // Game finished handler
     const handleGameFinished = (finalData) => {
         if (!mounted.current) return;
         console.log('Game finished handler called with data:', finalData);
 
-        // The server sends the complete game state, extract player statistics
         const players = finalData.players || [];
-
-        // Create leaderboard from player data
         const leaderboard = players.map(player => ({
             playerId: player.playerId,
             name: player.name,
@@ -42,7 +39,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             wrong: (player.totalAnswers || 0) - (player.correctAnswers || 0)
         })).sort((a, b) => b.score - a.score);
 
-        // Create the final results structure that MultiplayerResults expects
         const processedResults = {
             players: leaderboard,
             leaderboard: leaderboard,
@@ -53,10 +49,8 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
         console.log('Processed results for MultiplayerResults:', processedResults);
 
-        // Update statistics for all players
         updateMultiplayerStatistics(processedResults);
 
-        // Also notify parent component
         if (onGameFinished) {
             onGameFinished(processedResults);
         }
@@ -64,21 +58,8 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         setFinalResults(processedResults);
         setGameFinished(true);
     };
-    // Add this useEffect to debug what's happening with other players
-    useEffect(() => {
-        console.log('MultiplayerGame state update:', {
-            playerId: user.playerId,
-            gameFinished,
-            hasFinalResults: !!finalResults,
-            currentQuestionIndex: gameState.currentQuestionIndex,
-            totalQuestions: allQuestions.length,
-            isHost,
-            playersCount: players.length
-        });
-    }, [gameFinished, finalResults, gameState.currentQuestionIndex, allQuestions.length, isHost, players.length, user.playerId]);
 
     // Effect to periodically check if game is finished
-    // Replace the current game completion check useEffect with this:
     useEffect(() => {
         const checkGameCompletion = async () => {
             if (gameFinished) return;
@@ -100,52 +81,12 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             }
         };
 
-        // Check every second for all players
         const interval = setInterval(checkGameCompletion, 1000);
         return () => clearInterval(interval);
     }, [roomCode, gameFinished, user.playerId]);
 
     useEffect(() => {
         let nextQuestionHandler, answerSubmittedHandler, gameFinishedHandler;
-
-        // Add this helper function
-        const processFinalGameData = (finalData) => {
-            console.log('Processing final game data for player:', user.playerId);
-
-            // The server sends the complete game state, extract player statistics
-            const players = finalData.players || [];
-
-            // Create leaderboard from player data
-            const leaderboard = players.map(player => ({
-                playerId: player.playerId,
-                name: player.name,
-                score: player.score || 0,
-                correct: player.correctAnswers || 0,
-                wrong: (player.totalAnswers || 0) - (player.correctAnswers || 0)
-            })).sort((a, b) => b.score - a.score);
-
-            // Create the final results structure that MultiplayerResults expects
-            const processedResults = {
-                players: leaderboard,
-                leaderboard: leaderboard,
-                correctCount: finalData.correctCount || 0,
-                wrongCount: finalData.wrongCount || 0,
-                totalQuestions: finalData.totalQuestions || allQuestions.length
-            };
-
-            console.log('Processed results for player:', user.playerId, processedResults);
-
-            // Update statistics for all players
-            updateMultiplayerStatistics(processedResults);
-
-            // Also notify parent component
-            if (onGameFinished) {
-                onGameFinished(processedResults);
-            }
-
-            setFinalResults(processedResults);
-            setGameFinished(true);
-        };
 
         const initializeGame = async () => {
             try {
@@ -161,7 +102,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     setPlayerAnswers({});
                     setPlayers(gameDetails.players || []);
                     setAllQuestions(gameDetails.questions || []);
-
 
                     // Check if this is the last question
                     const currentIndex = gameDetails.currentQuestionIndex || 0;
@@ -193,12 +133,10 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     }));
                 };
 
-                // In the main useEffect, make sure the GameFinished handler is robust:
                 gameFinishedHandler = (finalData) => {
                     console.log('GameFinished SignalR event received by player:', user.playerId, finalData);
                     if (!mounted.current) return;
 
-                    // Process immediately when we get the event
                     const players = finalData.players || [];
                     const leaderboard = players.map(player => ({
                         playerId: player.playerId,
@@ -220,8 +158,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
                     setFinalResults(processedResults);
                     setGameFinished(true);
-
-                    // Update statistics
                     updateMultiplayerStatistics(processedResults);
 
                     if (onGameFinished) {
@@ -260,11 +196,11 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                         // Check if game is already finished
                         if (gameDetails.state === 'Finished') {
                             console.log('Game already finished when loading state');
-                            handleGameFinished(gameDetails); // Use the component-scoped function
+                            handleGameFinished(gameDetails);
                             return;
                         }
 
-                        // Initialize player answers based on current game state
+                        // Initialize player answers
                         const initialPlayerAnswers = {};
                         if (gameDetails.playerAnswers) {
                             Object.keys(gameDetails.playerAnswers).forEach(playerId => {
@@ -306,7 +242,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
     const updateMultiplayerStatistics = async (finalData) => {
         try {
-            // Get current player's results from final data
             const playerResults = finalData.leaderboard?.find(p =>
                 p.playerId === parseInt(user.playerId)
             );
@@ -317,7 +252,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                 const wrongAnswers = playerResults.wrong || 0;
                 const score = playerResults.score || 0;
 
-                // Determine category from game settings or questions
                 const category = gameState.settings?.category ||
                     allQuestions[0]?.category ||
                     'General';
@@ -329,7 +263,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     totalQuestions
                 });
 
-                // Call the statistics update endpoint
                 await fetch(`http://localhost:5216/statistics/update`, {
                     method: 'POST',
                     headers: {
@@ -405,13 +338,10 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
             if (isLastQuestion) {
                 console.log('Finishing game by calling next question on last question');
-
-                // Call next question endpoint even on last question - this should trigger game finished state
                 await fetch(`http://localhost:5216/games/${roomCode}/next`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
-
                 console.log('Next question called on final question - game should finish');
             } else {
                 console.log('Calling next question endpoint...');
@@ -420,14 +350,12 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
             }
-
         } catch (err) {
             console.error('Next question/finish game failed:', err);
         }
     };
 
     const handlePlayAgain = () => {
-        // Reset game state and wait for host to start new game
         setGameFinished(false);
         setFinalResults(null);
         setCurrentQuestion(null);
@@ -435,7 +363,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         setPlayerAnswers({});
         setCorrectAnswerCount(0);
         setWrongAnswerCount(0);
-
         console.log('Play again requested');
     };
 
@@ -447,8 +374,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     const totalPlayersCount = players.length;
     const currentQuestionIndex = gameState.currentQuestionIndex || 0;
     const totalQuestions = allQuestions.length;
-
-    // Check if this is the last question
     const isLastQuestion = currentQuestionIndex >= totalQuestions - 1;
 
     // Show results screen when game is finished

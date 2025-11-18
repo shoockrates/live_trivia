@@ -62,7 +62,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     });
                 };
 
-
                 playerLeftHandler = (data) => {
                     console.log('Player left event received:', data);
                     if (!mounted.current) return;
@@ -322,7 +321,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 console.log('CURRENT SETTINGS AFTER UPDATE:', currentSettings);
 
                 // Check if the category and difficulty are what we expect
-
                 if (currentSettings.category.toLowerCase() !== selectedCategory.toLowerCase() || currentSettings.difficulty !== "any") {
                     throw new Error(`Settings not updated correctly. Expected: ${selectedCategory}, any. Got: ${currentSettings.category}, ${currentSettings.difficulty}`);
                 }
@@ -390,6 +388,21 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         </div>
                     </div>
                 </div>
+
+                {isHost && selectedCategory && (
+                    <div style={{
+                        background: 'rgba(255, 215, 0, 0.1)',
+                        color: 'gold',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        marginBottom: '10px',
+                        border: '1px solid gold'
+                    }}>
+                        Debug: Checking questions for "{selectedCategory}"...
+                    </div>
+                )}
 
                 <div className="connection-status">
                     <div className={`status-indicator ${connectionStatus}`}>

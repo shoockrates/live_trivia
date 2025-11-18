@@ -1,7 +1,5 @@
-using live_trivia;
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
-using live_trivia.Extensions;
 
 namespace live_trivia.Repositories
 {
@@ -46,12 +44,14 @@ namespace live_trivia.Repositories
 
             if (!string.IsNullOrWhiteSpace(category))
             {
-                query = query.Where(q => q.Category == category);
+                // Use case-insensitive matching for category
+                query = query.Where(q => EF.Functions.ILike(q.Category, category));
             }
-            
+
+            // Only filter by difficulty if it's explicitly provided and not "any"
             if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
             {
-                query = query.Where(q => q.Difficulty == difficulty);
+                query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
             }
 
             return await query

@@ -42,6 +42,7 @@ public class GameService : IGameService
         if (questions.Count < settings.QuestionCount)
         {
             throw new Exceptions.NotEnoughQuestionsException(settings.Category!, settings.QuestionCount);
+
         }
 
         // Replace previous questions

@@ -193,6 +193,7 @@ function App() {
         setShowProfile(false);
     };
 
+
     const handleStartMultiplayerGame = (category, roomCode) => {
         console.log('Starting multiplayer game:', { category, roomCode });
         setSelectedCategory(category);
@@ -208,6 +209,7 @@ function App() {
         setCurrentView('multiplayer-lobby');
         setMultiplayerGame(null);
     };
+
 
     // Load all questions once to derive categories
     useEffect(() => {
