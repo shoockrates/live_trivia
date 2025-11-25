@@ -227,4 +227,37 @@ public class GameService : IGameService
     {
         await _gamesRepo.SaveChangesAsync();
     }
+
+    public async Task CleanupGameAsync(string roomId)
+    {
+        try
+        {
+            Console.WriteLine($"Starting cleanup for game room: {roomId}");
+
+            // First check if game exists
+            var game = await _gamesRepo.GetGameAsync(roomId);
+            if (game == null)
+            {
+                Console.WriteLine($"Game {roomId} not found in database");
+                _activeGamesService.TryRemoveGame(roomId);
+                return;
+            }
+
+            Console.WriteLine($"Found game {roomId}, proceeding with deletion");
+
+            // Delete the game from database (cascades to related records)
+            await _gamesRepo.DeleteGameAsync(roomId);
+
+            // Remove from active games tracking
+            _activeGamesService.TryRemoveGame(roomId);
+
+            Console.WriteLine($"Successfully cleaned up game room: {roomId}");
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't throw - cleanup is best effort
+            Console.WriteLine($"Error cleaning up game {roomId}: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
 }

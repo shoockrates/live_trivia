@@ -24,7 +24,11 @@ namespace live_trivia.Repositories
             var query = _context.Games.AsQueryable();
 
             if (includePlayers)
-                query = query.Include(g => g.GamePlayers);
+            {
+                query = query
+                    .Include(g => g.GamePlayers)
+                        .ThenInclude(gp => gp.Player);
+            }
 
             if (includeQuestions)
                 query = query.Include(g => g.Questions);
@@ -66,6 +70,18 @@ namespace live_trivia.Repositories
         public async Task<GameSettings?> GetGameSettingsAsync(string roomId)
         {
             return await _context.GameSettings.FirstOrDefaultAsync(s => s.GameRoomId == roomId);
+        }
+
+        public async Task DeleteGameAsync(string roomId)
+        {
+            var game = await _context.Games
+                .FirstOrDefaultAsync(g => g.RoomId == roomId);
+
+            if (game != null)
+            {
+                _context.Games.Remove(game);
+                await SaveChangesAsync(); // Call save here instead of in service
+            }
         }
     }
 }

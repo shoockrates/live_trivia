@@ -46,6 +46,7 @@ public class Game : BaseEntity
     public List<Player> GetLeaderboard()
     {
         return GamePlayers
+            .Where(gp => gp.Player != null)
             .Select(gp => gp.Player)
             .OrderByDescending(p => p.Score)
             .ToList();

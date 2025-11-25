@@ -120,6 +120,9 @@ namespace live_trivia.Controllers
                     FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
                 });
 
+                await Task.Delay(5000);
+                await _gameService.CleanupGameAsync(roomId);
+
                 return Ok(new { message = "Game finished.", state = game.State.ToString() });
             }
 
@@ -129,6 +132,7 @@ namespace live_trivia.Controllers
 
             return Ok(new { message = "Moved to next question.", questionIndex = game.CurrentQuestionIndex });
         }
+
 
         [HttpPost("{roomId}/join")]
         [Authorize]
@@ -251,6 +255,26 @@ namespace live_trivia.Controllers
         {
             var activeGames = _activeGamesService.GetActiveGameIds();
             return Ok(activeGames);
+        }
+
+        [HttpDelete("{roomId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteGame(string roomId)
+        {
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null)
+                return NotFound("Game not found");
+
+            var playerIdClaim = User.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+                return Unauthorized("Authenticated player identity not found.");
+
+            // Only host can delete
+            if (game.HostPlayerId != playerId)
+                return Forbid("Only the host can delete the game.");
+
+            await _gameService.CleanupGameAsync(roomId);
+            return Ok(new { message = "Game deleted successfully." });
         }
 
     }
