@@ -11,4 +11,5 @@ public interface IGameService
     Task<Player?> GetPlayerByIdAsync(int playerId);
     Task AddExistingPlayerToGameAsync(Game game, Player player);
     Task SaveChangesAsync();
+    Task CleanupGameAsync(string roomId);
 }

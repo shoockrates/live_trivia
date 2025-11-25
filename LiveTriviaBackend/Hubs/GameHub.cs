@@ -228,6 +228,11 @@ namespace live_trivia.Hubs
                         Leaderboard = leaderboard,
                         FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
                     });
+
+                    // Cleanup game after a short delay, in the same scope
+                    await Task.Delay(5000);
+                    await _gameService.CleanupGameAsync(roomId);
+                    Console.WriteLine($"Cleaned up game room: {roomId}");
                 }
             }
             catch (Exception ex)
