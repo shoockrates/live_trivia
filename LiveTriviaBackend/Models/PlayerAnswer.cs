@@ -9,6 +9,8 @@ namespace live_trivia
         public List<int> SelectedAnswerIndexes { get; set; } = new List<int>();
         public DateTime AnsweredAt { get; set; } = DateTime.UtcNow;
         public bool IsCorrect { get; set; } = false; // update when processing the answer
+        public int TimeLeft { get; set; }
+        public double Score { get; set; }
 
         public virtual Player Player { get; set; } = null!;
         public virtual Question Question { get; set; } = null!;

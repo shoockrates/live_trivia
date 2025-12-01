@@ -60,19 +60,22 @@ public class GameService : IGameService
         return true;
     }
 
+
     public async Task<Game?> GetGameAsync(string roomId)
     {
         if (string.IsNullOrWhiteSpace(roomId))
             throw new ArgumentException("RoomId cannot be null or empty.", nameof(roomId));
 
         var game = await _gamesRepo.GetGameAsync(
-                roomId,
-                true,
-                true
+            roomId,
+            includePlayers: true,
+            includeQuestions: true,
+            includeAnswers: true
         );
 
         return game;
     }
+
 
     public async Task<GameDetailsDto?> GetGameDetailsAsync(string roomId)
     {
@@ -107,6 +110,7 @@ public class GameService : IGameService
                 PlayerId = gp.PlayerId,
                 Name = gp.Player.Name,
                 CurrentScore = gp.Player.Score,
+                Score = gp.Player.Score,
                 HasSubmittedAnswer = currentAnswers.Any(pa => pa.PlayerId == gp.PlayerId)
             }).ToList(),
             Questions = questions.Select(q => new QuestionDto

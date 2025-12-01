@@ -34,6 +34,7 @@ function App() {
     const [resultsIn, setResultsIn] = useState(false);
     const [earlySubmitDialogOpen, setEarlySubmitDialogOpen] = useState(false);
     const [multiplayerGame, setMultiplayerGame] = useState(null);
+    const [score, setScore] = useState(0);
 
 
 
@@ -239,6 +240,7 @@ function App() {
     }, [API_BASE, isAuthenticated]);
 
     const handleSelect = (category) => {
+        setScore(0);
         setSelectedCategory(category);
         setLoading(true);
         setError(null);
@@ -305,27 +307,53 @@ function App() {
         }
     }, [gameFinished]);
 
-    const selectAnswer = (selected) => {
+
+
+    const selectAnswer = (selected, timeLeft) => {
         setRevealed(true);
 
         const userAnswer = Array.isArray(selected) ? selected : [selected];
         const correctAnswer = Array.isArray(correctIdxs) ? correctIdxs : [correctIdxs];
 
-        const isCorrect = JSON.stringify(userAnswer.sort() === JSON.stringify(correctAnswer.sort()));
+        const sortedUser = [...userAnswer].sort((a, b) => a - b);
+        const sortedCorrect = [...correctAnswer].sort((a, b) => a - b);
+
+        const isCorrect = JSON.stringify(sortedUser) === JSON.stringify(sortedCorrect);
+
+        const totalQuestions = questions.length || 1;
+        const TIME_LIMIT_SECONDS = 30; // must match QuestionDisplay
 
         if (isCorrect) {
             setCorrectCount(prev => prev + 1);
+
+            const basePerQuestion = 100 / totalQuestions;
+
+            const clampedTime = Math.max(0, Math.min(TIME_LIMIT_SECONDS, timeLeft ?? 0));
+            const timeFactor = clampedTime / TIME_LIMIT_SECONDS;
+            const multiplier = 0.5 + 0.5 * timeFactor;
+
+            const questionScore = basePerQuestion * multiplier;
+
+            setScore(prev => prev + questionScore);
         } else {
             setWrongCount(prev => prev + 1);
+
         }
     };
+
+
 
     const goNext = () => {
         if (currentIndex >= questions.length - 1) {
             if (!gameFinished) {
                 setGameFinished(true);
                 setGameEndedAt(Date.now());
-                updateGameStatistics(selectedCategory, correctCount, questions.length, calculateScore());
+                updateGameStatistics(
+                    selectedCategory,
+                    correctCount,
+                    questions.length,
+                    Math.round(score)
+                );
             }
             return;
         }
@@ -386,11 +414,6 @@ function App() {
         } catch (error) {
             console.error('Error updating statistics:', error);
         }
-    };
-
-    const calculateScore = () => {
-        // Simple scoring 
-        return Math.round((correctCount / questions.length) * 100);
     };
 
     // Render authentication views

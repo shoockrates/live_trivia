@@ -77,6 +77,8 @@ public class Game : BaseEntity
         if (CurrentQuestionIndex < 0 || CurrentQuestionIndex >= Questions.Count) return;
 
         var question = Questions.ElementAt(CurrentQuestionIndex);
+        const int TIME_LIMIT_SECONDS = 30;
+
         foreach (var gamePlayer in GamePlayers)
         {
             var player = gamePlayer.Player;
@@ -85,24 +87,31 @@ public class Game : BaseEntity
 
             if (playerAnswer != null)
             {
+                // Check if answer is correct
                 playerAnswer.IsCorrect = question.CorrectAnswerIndexes.All(i => playerAnswer.SelectedAnswerIndexes.Contains(i)) &&
                                  playerAnswer.SelectedAnswerIndexes.All(i => question.CorrectAnswerIndexes.Contains(i));
+
                 if (playerAnswer.IsCorrect)
                 {
-                    switch (question.Difficulty.ToLower())
-                    {
-                        case "easy":
-                            player.Score += 1;
-                            break;
-                        case "medium":
-                            player.Score += 2;
-                            break;
-                        case "hard":
-                            player.Score += 3;
-                            break;
-                        default:
-                            break;
-                    }
+                    int totalQuestions = Questions.Count > 0 ? Questions.Count : 1;
+                    double basePerQuestion = 100.0 / totalQuestions;
+
+                    int clampedTime = Math.Max(0, Math.Min(TIME_LIMIT_SECONDS, playerAnswer.TimeLeft));
+                    double timeFactor = (double)clampedTime / TIME_LIMIT_SECONDS;
+
+                    double multiplier = 0.5 + 0.5 * timeFactor;
+
+                    double questionScore = basePerQuestion * multiplier;
+
+                    playerAnswer.Score = questionScore;
+
+                    player.Score += (int)Math.Round(questionScore);
+
+                    Console.WriteLine($"Player {player.Name} scored {questionScore:F2} points (Time left: {clampedTime}s)");
+                }
+                else
+                {
+                    playerAnswer.Score = 0;
                 }
             }
         }

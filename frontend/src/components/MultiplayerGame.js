@@ -17,6 +17,9 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     const [correctAnswerCount, setCorrectAnswerCount] = useState(0);
     const [wrongAnswerCount, setWrongAnswerCount] = useState(0);
 
+    const correctAnswerCountRef = useRef(0);
+    const wrongAnswerCountRef = useRef(0);
+    const statsUpdatedRef = useRef(false);
     const listenersRegistered = useRef(false);
     const mounted = useRef(true);
 
@@ -25,31 +28,43 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         return () => { mounted.current = false; };
     }, []);
 
-    // Game finished handler
     const handleGameFinished = (finalData) => {
         if (!mounted.current) return;
+
+        if (statsUpdatedRef.current) {
+            console.log('Stats already updated, skipping duplicate update');
+            return;
+        }
+
         console.log('Game finished handler called with data:', finalData);
 
-        const players = finalData.players || [];
-        const leaderboard = players.map(player => ({
-            playerId: player.playerId,
+        const rawPlayers = finalData.leaderboard || finalData.players || [];
+
+        const leaderboard = rawPlayers.map(player => ({
+            playerId: player.playerId ?? player.id,
             name: player.name,
-            score: player.score || 0,
-            correct: player.correctAnswers || 0,
-            wrong: (player.totalAnswers || 0) - (player.correctAnswers || 0)
+            score: player.score ?? player.currentScore ?? 0,
+            correct: correctAnswerCountRef.current,
+            wrong: wrongAnswerCountRef.current,
         })).sort((a, b) => b.score - a.score);
+
+        const totalQuestions =
+            (correctAnswerCountRef.current + wrongAnswerCountRef.current) ||
+            finalData.totalQuestions ||
+            allQuestions.length;
 
         const processedResults = {
             players: leaderboard,
-            leaderboard: leaderboard,
-            correctCount: finalData.correctCount || 0,
-            wrongCount: finalData.wrongCount || 0,
-            totalQuestions: finalData.totalQuestions || allQuestions.length
+            leaderboard,
+            correctCount: correctAnswerCountRef.current,
+            wrongCount: wrongAnswerCountRef.current,
+            totalQuestions
         };
 
         console.log('Processed results for MultiplayerResults:', processedResults);
 
-        updateMultiplayerStatistics(processedResults);
+        statsUpdatedRef.current = true;
+        updateMultiplayerStatistics(processedResults, leaderboard);
 
         if (onGameFinished) {
             onGameFinished(processedResults);
@@ -59,7 +74,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         setGameFinished(true);
     };
 
-    // Effect to periodically check if game is finished
     useEffect(() => {
         const checkGameCompletion = async () => {
             if (gameFinished) return;
@@ -103,7 +117,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     setPlayers(gameDetails.players || []);
                     setAllQuestions(gameDetails.questions || []);
 
-                    // Check if this is the last question
                     const currentIndex = gameDetails.currentQuestionIndex || 0;
                     const totalQuestions = gameDetails.questions?.length || 0;
                     const isLastQuestion = currentIndex >= totalQuestions - 1;
@@ -136,33 +149,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                 gameFinishedHandler = (finalData) => {
                     console.log('GameFinished SignalR event received by player:', user.playerId, finalData);
                     if (!mounted.current) return;
-
-                    const players = finalData.players || [];
-                    const leaderboard = players.map(player => ({
-                        playerId: player.playerId,
-                        name: player.name,
-                        score: player.score || 0,
-                        correct: player.correctAnswers || 0,
-                        wrong: (player.totalAnswers || 0) - (player.correctAnswers || 0)
-                    })).sort((a, b) => b.score - a.score);
-
-                    const processedResults = {
-                        players: leaderboard,
-                        leaderboard: leaderboard,
-                        correctCount: finalData.correctCount || 0,
-                        wrongCount: finalData.wrongCount || 0,
-                        totalQuestions: finalData.totalQuestions || allQuestions.length
-                    };
-
-                    console.log('Processed results from SignalR event:', processedResults);
-
-                    setFinalResults(processedResults);
-                    setGameFinished(true);
-                    updateMultiplayerStatistics(processedResults);
-
-                    if (onGameFinished) {
-                        onGameFinished(processedResults);
-                    }
+                    handleGameFinished(finalData);
                 };
 
                 if (!listenersRegistered.current) {
@@ -193,14 +180,12 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                         setIsHost(gameDetails.hostPlayerId === parseInt(user.playerId));
                         setAllQuestions(gameDetails.questions || []);
 
-                        // Check if game is already finished
                         if (gameDetails.state === 'Finished') {
                             console.log('Game already finished when loading state');
                             handleGameFinished(gameDetails);
                             return;
                         }
 
-                        // Initialize player answers
                         const initialPlayerAnswers = {};
                         if (gameDetails.playerAnswers) {
                             Object.keys(gameDetails.playerAnswers).forEach(playerId => {
@@ -240,51 +225,47 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         };
     }, [roomCode, user.playerId, onGameFinished]);
 
-    const updateMultiplayerStatistics = async (finalData) => {
+    const updateMultiplayerStatistics = async (finalData, leaderboard) => {
         try {
-            const playerResults = finalData.leaderboard?.find(p =>
-                p.playerId === parseInt(user.playerId)
-            );
+            const totalQuestions = finalData.totalQuestions ?? allQuestions.length;
+            const correctAnswers = finalData.correctCount ?? 0;
 
-            if (playerResults) {
-                const totalQuestions = allQuestions.length;
-                const correctAnswers = playerResults.correct || 0;
-                const wrongAnswers = playerResults.wrong || 0;
-                const score = playerResults.score || 0;
+            const currentPlayerData = leaderboard.find(p => p.playerId === parseInt(user.playerId));
+            const score = currentPlayerData?.score ?? 0;
 
-                const category = gameState.settings?.category ||
-                    allQuestions[0]?.category ||
-                    'General';
+            const category =
+                gameState.settings?.category ||
+                allQuestions[0]?.category ||
+                'General';
 
-                console.log('Updating multiplayer stats:', {
+            console.log('Updating multiplayer stats:', {
+                category,
+                score,
+                correctAnswers,
+                totalQuestions
+            });
+
+            await fetch('http://localhost:5216/statistics/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
                     category,
                     score,
                     correctAnswers,
                     totalQuestions
-                });
+                })
+            });
 
-                await fetch(`http://localhost:5216/statistics/update`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({
-                        category: category,
-                        score: score,
-                        correctAnswers: correctAnswers,
-                        totalQuestions: totalQuestions
-                    })
-                });
-
-                console.log('Multiplayer statistics updated successfully');
-            }
+            console.log('Multiplayer statistics updated successfully');
         } catch (error) {
             console.error('Failed to update multiplayer statistics:', error);
         }
     };
 
-    const handleAnswerSelect = async (selectedIndex) => {
+    const handleAnswerSelect = async (selectedIndex, timeLeft) => {
         if (!currentQuestion || hasAnswered) return;
 
         try {
@@ -293,16 +274,21 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             const selectedIndexes = Array.isArray(selectedIndex) ? selectedIndex : [selectedIndex];
             const correctAnswer = currentQuestion.correctAnswerIndexes || [];
 
-            // Check if answer is correct
-            const isCorrect = JSON.stringify([...selectedIndexes].sort()) ===
-                JSON.stringify([...correctAnswer].sort());
+            const sortedSelected = [...selectedIndexes].sort((a, b) => a - b);
+            const sortedCorrect = [...correctAnswer].sort((a, b) => a - b);
 
-            // Update counts
+            const isCorrect = JSON.stringify(sortedSelected) === JSON.stringify(sortedCorrect);
+
             if (isCorrect) {
-                setCorrectAnswerCount(prev => prev + 1);
+                correctAnswerCountRef.current += 1;
+                setCorrectAnswerCount(correctAnswerCountRef.current);
             } else {
-                setWrongAnswerCount(prev => prev + 1);
+                wrongAnswerCountRef.current += 1;
+                setWrongAnswerCount(wrongAnswerCountRef.current);
             }
+
+            const TIME_LIMIT_SECONDS = 30;
+            const clampedTime = Math.max(0, Math.min(TIME_LIMIT_SECONDS, timeLeft ?? 0));
 
             const questionId = currentQuestion.id || allQuestions[gameState.currentQuestionIndex]?.id;
 
@@ -312,7 +298,11 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({ questionId, selectedAnswerIndexes: selectedIndexes })
+                body: JSON.stringify({
+                    questionId,
+                    selectedAnswerIndexes: selectedIndexes,
+                    timeLeft: clampedTime
+                })
             });
 
             await signalRService.submitAnswer(roomCode, questionId, selectedIndexes);
@@ -363,6 +353,9 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         setPlayerAnswers({});
         setCorrectAnswerCount(0);
         setWrongAnswerCount(0);
+        correctAnswerCountRef.current = 0;
+        wrongAnswerCountRef.current = 0;
+        statsUpdatedRef.current = false;
         console.log('Play again requested');
     };
 
@@ -376,7 +369,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     const totalQuestions = allQuestions.length;
     const isLastQuestion = currentQuestionIndex >= totalQuestions - 1;
 
-    // Show results screen when game is finished
     if (gameFinished && finalResults) {
         console.log('Rendering MultiplayerResults with:', finalResults);
         return (

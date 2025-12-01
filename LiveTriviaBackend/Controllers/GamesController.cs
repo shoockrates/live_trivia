@@ -176,7 +176,6 @@ namespace live_trivia.Controllers
         [Authorize]
         public async Task<IActionResult> SubmitAnswer(string roomId, [FromBody] AnswerRequest request)
         {
-            // The claim is stored as a string, so we must parse it to an int.
             var playerIdClaim = User.FindFirst("playerId");
             if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
             {
@@ -201,7 +200,8 @@ namespace live_trivia.Controllers
                 QuestionId = question.Id,
                 GameRoomId = roomId,
                 SelectedAnswerIndexes = request.SelectedAnswerIndexes,
-                AnsweredAt = DateTime.UtcNow
+                AnsweredAt = DateTime.UtcNow,
+                TimeLeft = request.TimeLeft
             };
 
             game.PlayerAnswers.Add(playerAnswer);

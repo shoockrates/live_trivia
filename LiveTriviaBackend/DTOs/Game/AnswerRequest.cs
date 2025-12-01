@@ -4,6 +4,7 @@ namespace live_trivia.Dtos
     {
         public int QuestionId { get; set; }
         public List<int> SelectedAnswerIndexes { get; set; } = new();
+        public int TimeLeft { get; set; }
     }
 
 }
