@@ -55,6 +55,7 @@ const QuestionDisplay = ({
         }
     };
 
+
     const handleSubmit = () => {
         if (isAnswered || selectedAnswers.length === 0) return;
 
@@ -62,8 +63,9 @@ const QuestionDisplay = ({
 
         const finalAnswer = [...selectedAnswers].sort((a, b) => a - b);
 
-        onAnswerSelect(finalAnswer);
+        onAnswerSelect(finalAnswer, timeLeft);
     };
+
 
     // Auto-advance only in multiplayer or if not skipped
     useEffect(() => {

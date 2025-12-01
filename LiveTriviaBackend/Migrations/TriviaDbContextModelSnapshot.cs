@@ -5,14 +5,12 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
-using System.Diagnostics.CodeAnalysis;
 
 #nullable disable
 
 namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
-    [ExcludeFromCodeCoverage]
     partial class TriviaDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -239,9 +237,15 @@ namespace LiveTriviaBackend.Migrations
                     b.Property<int>("QuestionId")
                         .HasColumnType("integer");
 
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("SelectedAnswerIndexes")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("TimeLeft")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

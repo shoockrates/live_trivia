@@ -19,22 +19,27 @@ namespace live_trivia.Repositories
             await _context.Games.AddAsync(game);
         }
 
-        public async Task<Game?> GetGameAsync(string roomId, bool includePlayers = false, bool includeQuestions = false)
+
+        public async Task<Game?> GetGameAsync(
+            string roomId,
+            bool includePlayers = false,
+            bool includeQuestions = false,
+            bool includeAnswers = false)
         {
             var query = _context.Games.AsQueryable();
 
             if (includePlayers)
-            {
-                query = query
-                    .Include(g => g.GamePlayers)
-                        .ThenInclude(gp => gp.Player);
-            }
+                query = query.Include(g => g.GamePlayers).ThenInclude(gp => gp.Player);
 
             if (includeQuestions)
                 query = query.Include(g => g.Questions);
 
+            if (includeAnswers)
+                query = query.Include(g => g.PlayerAnswers);
+
             return await query.FirstOrDefaultAsync(g => g.RoomId == roomId);
         }
+
 
 
         public async Task<Game?> GetGameDetailsAsync(string roomId)
