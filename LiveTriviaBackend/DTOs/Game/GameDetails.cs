@@ -14,4 +14,6 @@ public record GameDetailsDto
     public int TotalQuestions { get; init; }
     public List<GamePlayerDto> Players { get; init; } = new();
     public List<QuestionDto> Questions { get; init; } = new();
+    public Dictionary<string, int>? CategoryVotes { get; set; }
+    public Dictionary<int, string>? PlayerVotes { get; set; }
 }

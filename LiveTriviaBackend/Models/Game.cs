@@ -1,4 +1,5 @@
-﻿namespace live_trivia;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+namespace live_trivia;
 
 public class Game : BaseEntity
 {
@@ -15,10 +16,13 @@ public class Game : BaseEntity
     public virtual ICollection<PlayerAnswer> PlayerAnswers { get; set; } = new List<PlayerAnswer>();
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
 
+    public Dictionary<int, string> PlayerVotes { get; set; } = new Dictionary<int, string>();
+    public Dictionary<string, int> CategoryVotes { get; set; } = new Dictionary<string, int>();
+
     public Game() { }
 
     public Game(string roomId)
-    {
+    { 
         this.RoomId = roomId;
     }
 

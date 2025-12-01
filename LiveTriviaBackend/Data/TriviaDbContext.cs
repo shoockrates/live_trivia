@@ -48,6 +48,28 @@ namespace live_trivia.Data
                 entity.Property(g => g.StartedAt);
                 entity.Property(g => g.EndedAt);
 
+                entity.Property(g => g.CategoryVotes)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, jsonOptions),
+                        v => JsonSerializer.Deserialize<Dictionary<string, int>>(v, jsonOptions) ?? new Dictionary<string, int>()
+                    )
+                    // Value comparer is crucial for EF Core to detect changes in the dictionary
+                    .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, int>>(
+                        (c1, c2) => JsonSerializer.Serialize(c1, jsonOptions) == JsonSerializer.Serialize(c2, jsonOptions),
+                        c => c == null ? 0 : JsonSerializer.Serialize(c, jsonOptions).GetHashCode(),
+                        c => JsonSerializer.Deserialize<Dictionary<string, int>>(JsonSerializer.Serialize(c, jsonOptions), jsonOptions)!));
+
+                // 2. Configure JSON serialization for PlayerVotes (Dictionary<int, string>)
+                entity.Property(g => g.PlayerVotes)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, jsonOptions),
+                        v => JsonSerializer.Deserialize<Dictionary<int, string>>(v, jsonOptions) ?? new Dictionary<int, string>()
+                    )
+                    .Metadata.SetValueComparer(new ValueComparer<Dictionary<int, string>>(
+                        (c1, c2) => JsonSerializer.Serialize(c1, jsonOptions) == JsonSerializer.Serialize(c2, jsonOptions),
+                        c => c == null ? 0 : JsonSerializer.Serialize(c, jsonOptions).GetHashCode(),
+                        c => JsonSerializer.Deserialize<Dictionary<int, string>>(JsonSerializer.Serialize(c, jsonOptions), jsonOptions)!));
+                        
                 // Indexes
                 entity.HasIndex(g => g.State);
                 entity.HasIndex(g => g.CurrentQuestionIndex);
