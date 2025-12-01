@@ -99,6 +99,51 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         return () => clearInterval(interval);
     }, [roomCode, gameFinished, user.playerId]);
 
+    const loadGameState = async () => {
+        try {
+            const response = await fetch(`http://localhost:5216/games/${roomCode}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (response.ok) {
+                const gameDetails = await response.json();
+                if (mounted.current) {
+                    setGameState(gameDetails);
+                    setPlayers(gameDetails.players || []);
+                    setIsHost(gameDetails.hostPlayerId === parseInt(user.playerId));
+                    setAllQuestions(gameDetails.questions || []);
+
+                    if (gameDetails.state === 'Finished') {
+                        console.log('Game already finished when loading state');
+                        handleGameFinished(gameDetails);
+                        return;
+                    }
+
+                    const initialPlayerAnswers = {};
+                    if (gameDetails.playerAnswers) {
+                        Object.keys(gameDetails.playerAnswers).forEach(playerId => {
+                            initialPlayerAnswers[playerId] = true;
+                        });
+                    }
+                    setPlayerAnswers(initialPlayerAnswers);
+
+                    if (gameDetails.state === 'InProgress' && gameDetails.currentQuestionIndex >= 0) {
+                        const q = gameDetails.questions?.[gameDetails.currentQuestionIndex];
+                        if (q) {
+                            setCurrentQuestion({
+                                text: q.text,
+                                answers: q.answers,
+                                id: q.id,
+                                correctAnswerIndexes: q.correctAnswerIndexes || []
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Load game state failed:', err);
+        }
+    };
+
     useEffect(() => {
         let nextQuestionHandler, answerSubmittedHandler, gameFinishedHandler;
 
@@ -167,50 +212,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             }
         };
 
-        const loadGameState = async () => {
-            try {
-                const response = await fetch(`http://localhost:5216/games/${roomCode}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-                if (response.ok) {
-                    const gameDetails = await response.json();
-                    if (mounted.current) {
-                        setGameState(gameDetails);
-                        setPlayers(gameDetails.players || []);
-                        setIsHost(gameDetails.hostPlayerId === parseInt(user.playerId));
-                        setAllQuestions(gameDetails.questions || []);
-
-                        if (gameDetails.state === 'Finished') {
-                            console.log('Game already finished when loading state');
-                            handleGameFinished(gameDetails);
-                            return;
-                        }
-
-                        const initialPlayerAnswers = {};
-                        if (gameDetails.playerAnswers) {
-                            Object.keys(gameDetails.playerAnswers).forEach(playerId => {
-                                initialPlayerAnswers[playerId] = true;
-                            });
-                        }
-                        setPlayerAnswers(initialPlayerAnswers);
-
-                        if (gameDetails.state === 'InProgress' && gameDetails.currentQuestionIndex >= 0) {
-                            const q = gameDetails.questions?.[gameDetails.currentQuestionIndex];
-                            if (q) {
-                                setCurrentQuestion({
-                                    text: q.text,
-                                    answers: q.answers,
-                                    id: q.id,
-                                    correctAnswerIndexes: q.correctAnswerIndexes || []
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Load game state failed:', err);
-            }
-        };
 
         initializeGame();
 
@@ -318,6 +319,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         }
     };
 
+
     const handleNextQuestion = async () => {
         if (!isHost) return;
 
@@ -346,17 +348,46 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     };
 
     const handlePlayAgain = () => {
+        // Reset all game state
         setGameFinished(false);
         setFinalResults(null);
         setCurrentQuestion(null);
         setHasAnswered(false);
         setPlayerAnswers({});
+
+        // Reset the counts
         setCorrectAnswerCount(0);
         setWrongAnswerCount(0);
+
+        // Reset the refs
         correctAnswerCountRef.current = 0;
         wrongAnswerCountRef.current = 0;
+
+        // Reset the stats updated flag
         statsUpdatedRef.current = false;
-        console.log('Play again requested');
+
+        // Also reset the game state from the server
+        const resetGameState = async () => {
+            try {
+                await signalRService.leaveGameRoom(roomCode);
+
+                // Rejoin the room to get fresh state
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Reset players and load fresh game state
+                setPlayers([]);
+                await loadGameState();
+
+                // Rejoin the SignalR room
+                await signalRService.joinGameRoom(roomCode);
+
+                console.log('Play again - game state reset');
+            } catch (error) {
+                console.error('Error resetting game state:', error);
+            }
+        };
+
+        resetGameState();
     };
 
     const handleBackToLobby = () => {

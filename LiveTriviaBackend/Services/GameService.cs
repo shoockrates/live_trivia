@@ -32,21 +32,31 @@ public class GameService : IGameService
         {
             throw new Exceptions.GameStateException("At least one player is required to start the game.");
         }
+
+        foreach (var gp in game.GamePlayers)
+        {
+            if (gp.Player != null)
+            {
+                gp.Player.Score = 0;
+            }
+        }
+
         // Load game settings
         var settings = await _gamesRepo.GetGameSettingsAsync(roomId);
         if (settings == null || string.IsNullOrWhiteSpace(settings.Category) || settings.QuestionCount <= 0)
             return false;
 
-
-        // Fetch random questions from QuestionsRepository
-        var questions = await _questionsRepo.GetRandomQuestionsAsync(settings.QuestionCount, settings.Category, settings.Difficulty);
+        var questions = await _questionsRepo.GetRandomQuestionsAsync(
+            settings.QuestionCount,
+            settings.Category,
+            settings.Difficulty
+        );
 
         if (questions.Count < settings.QuestionCount)
         {
             throw new Exceptions.NotEnoughQuestionsException(settings.Category!, settings.QuestionCount);
         }
 
-        // Replace previous questions
         game.Questions.Clear();
         foreach (var q in questions)
             game.Questions.Add(q);
@@ -55,6 +65,7 @@ public class GameService : IGameService
         game.StartedAt = DateTime.UtcNow;
         game.CurrentQuestionIndex = 0;
 
+        // Make sure the reset + setup is saved
         await _gamesRepo.SaveChangesAsync();
 
         return true;
