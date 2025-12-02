@@ -15,6 +15,12 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
     const [error, setError] = useState('');
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
+
+    const [isVoting, setIsVoting] = useState(false);
+    const [votingCategories, setVotingCategories] = useState([]);
+    const [voteTallies, setVoteTallies] = useState({});
+    const [myVote, setMyVote] = useState(null);
+
     const listenersRegistered = useRef(false);
     const mounted = useRef(true);
     const connectionInitialized = useRef(false);
@@ -95,6 +101,34 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 signalRService.onPlayerLeft(playerLeftHandler);
                 signalRService.onGameStarted(gameStartedHandler);
                 signalRService.onGameStartFailed(gameStartFailedHandler);
+
+
+                signalRService.onCategoryVotingStarted((data) => {
+                    console.log('CategoryVotingStarted', data);
+                    setIsVoting(true);
+                    setVotingCategories(data.categories || data.Categories || []);
+                    setVoteTallies({});
+                    setMyVote(null);
+                });
+
+                signalRService.onCategoryVoteUpdated((data) => {
+                    console.log('CategoryVoteUpdated', data);
+                    setVoteTallies(data.tallies || data.Tallies || {});
+                    if (data.playerId === user.playerId) {
+                        setMyVote(data.selectedCategory || data.SelectedCategory);
+                    }
+                });
+
+                signalRService.onCategoryVotingFinished((data) => {
+                    console.log('CategoryVotingFinished', data);
+                    const winning = data.winningCategory || data.WinningCategory;
+                    setIsVoting(false);
+                    setVotingCategories([]);
+                    setVoteTallies({});
+                    setMyVote(null);
+                    // Reflect winning category in local UI
+                    setSelectedCategory(winning);
+                });
 
                 listenersRegistered.current = true;
 

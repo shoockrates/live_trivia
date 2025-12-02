@@ -12,6 +12,9 @@ namespace live_trivia.Hubs
         private readonly GamesRepository _gamesRepository;
         private readonly IActiveGamesService _activeGamesService;
 
+
+        private static readonly Dictionary<string, CategoryVotingState> _categoryVotes = new();
+
         public GameHub(IGameService gameService, GamesRepository gamesRepository, IActiveGamesService activeGamesService)
         {
             _gameService = gameService;
@@ -264,6 +267,159 @@ namespace live_trivia.Hubs
             }
 
             await base.OnDisconnectedAsync(exception);
+        }
+
+
+        public async Task StartCategoryVoting(string roomId, List<string> categories)
+        {
+            var playerIdClaim = Context.User?.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                await Clients.Caller.SendAsync("Error", "Player identity not found");
+                return;
+            }
+
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null)
+            {
+                await Clients.Caller.SendAsync("Error", "Game not found");
+                return;
+            }
+
+            // Only host can start voting
+            if (game.HostPlayerId != playerId)
+            {
+                await Clients.Caller.SendAsync("Error", "Only the host can start voting");
+                return;
+            }
+
+            if (categories == null || categories.Count == 0)
+            {
+                await Clients.Caller.SendAsync("Error", "No categories provided for voting");
+                return;
+            }
+
+            var state = new CategoryVotingState
+            {
+                RoomId = roomId,
+                Categories = categories.Distinct().ToList(),
+                PlayerVotes = new Dictionary<int, string>()
+            };
+
+            _categoryVotes[roomId] = state;
+
+            await Clients.Group(roomId).SendAsync("CategoryVotingStarted", new
+            {
+                RoomId = roomId,
+                Categories = state.Categories
+            });
+        }
+
+
+        public async Task SubmitCategoryVote(string roomId, string category)
+        {
+            var playerIdClaim = Context.User?.FindFirst("playerId");
+            var playerName = Context.User?.Identity?.Name;
+
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                await Clients.Caller.SendAsync("Error", "Player identity not found");
+                return;
+            }
+
+            if (!_categoryVotes.TryGetValue(roomId, out var state))
+            {
+                await Clients.Caller.SendAsync("Error", "No active voting in this room");
+                return;
+            }
+
+            if (!state.Categories.Contains(category))
+            {
+                await Clients.Caller.SendAsync("Error", "Invalid category");
+                return;
+            }
+
+            // Save/overwrite player vote
+            state.PlayerVotes[playerId] = category;
+
+            // Build tallies
+            var tallies = state.Categories
+                .ToDictionary(
+                    c => c,
+                    c => state.PlayerVotes.Count(v => v.Value == c)
+                );
+
+            await Clients.Group(roomId).SendAsync("CategoryVoteUpdated", new
+            {
+                RoomId = roomId,
+                PlayerId = playerId,
+                PlayerName = playerName,
+                SelectedCategory = category,
+                Tallies = tallies
+            });
+        }
+
+
+        public async Task EndCategoryVoting(string roomId)
+        {
+            var playerIdClaim = Context.User?.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                await Clients.Caller.SendAsync("Error", "Player identity not found");
+                return;
+            }
+
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null)
+            {
+                await Clients.Caller.SendAsync("Error", "Game not found");
+                return;
+            }
+
+            // Only host can end voting
+            if (game.HostPlayerId != playerId)
+            {
+                await Clients.Caller.SendAsync("Error", "Only the host can end voting");
+                return;
+            }
+
+            if (!_categoryVotes.TryGetValue(roomId, out var state) ||
+                state.PlayerVotes.Count == 0)
+            {
+                await Clients.Caller.SendAsync("Error", "No active votes to finalize");
+                return;
+            }
+
+            // Determine winner (simple max; tie-breaker = first)
+            var winningCategory = state.PlayerVotes
+                .GroupBy(v => v.Value)
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.Key)
+                .First()
+                .Key;
+
+            // Update GameSettings using existing service
+            var settings = await _gameService.GetGameSettingsAsync(roomId);
+            if (settings != null)
+            {
+                var dto = new Dtos.GameSettingsDto
+                {
+                    Category = winningCategory,
+                    Difficulty = settings.Difficulty,
+                    QuestionCount = settings.QuestionCount,
+                    TimeLimitSeconds = settings.TimeLimitSeconds
+                };
+
+                await _gameService.UpdateGameSettingsAsync(roomId, dto);
+            }
+
+            _categoryVotes.Remove(roomId);
+
+            await Clients.Group(roomId).SendAsync("CategoryVotingFinished", new
+            {
+                RoomId = roomId,
+                WinningCategory = winningCategory
+            });
         }
     }
 }
