@@ -12,8 +12,9 @@ namespace live_trivia.Hubs
         private readonly GamesRepository _gamesRepository;
         private readonly IActiveGamesService _activeGamesService;
 
-
-        private static readonly Dictionary<string, CategoryVotingState> _categoryVotes = new();
+        // Track voting timeouts
+        private static readonly Dictionary<string, CancellationTokenSource> _votingTimeouts = new();
+        private const int VOTING_TIMEOUT_SECONDS = 60;
 
         public GameHub(IGameService gameService, GamesRepository gamesRepository, IActiveGamesService activeGamesService)
         {
@@ -269,7 +270,7 @@ namespace live_trivia.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-
+        // CATEGORY VOTING METHODS
         public async Task StartCategoryVoting(string roomId, List<string> categories)
         {
             var playerIdClaim = Context.User?.FindFirst("playerId");
@@ -299,22 +300,43 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            var state = new CategoryVotingState
-            {
-                RoomId = roomId,
-                Categories = categories.Distinct().ToList(),
-                PlayerVotes = new Dictionary<int, string>()
-            };
+            // Initialize voting in the database
+            var distinctCategories = categories.Distinct().ToList();
+            game.CategoryVotes = distinctCategories.ToDictionary(c => c, c => 0);
+            game.PlayerVotes = new Dictionary<int, string>();
+            await _gameService.SaveChangesAsync();
 
-            _categoryVotes[roomId] = state;
+            Console.WriteLine($"Category voting started for room {roomId} with {distinctCategories.Count} categories");
+
+            // Start timeout timer
+            CancelPreviousVotingTimeout(roomId);
+            var cts = new CancellationTokenSource();
+            _votingTimeouts[roomId] = cts;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(VOTING_TIMEOUT_SECONDS), cts.Token);
+
+                    // Auto-end voting after timeout
+                    Console.WriteLine($"Voting timeout reached for room {roomId}, auto-ending voting");
+                    await AutoEndVoting(roomId);
+                }
+                catch (TaskCanceledException)
+                {
+                    // Timeout was cancelled, voting ended manually
+                    Console.WriteLine($"Voting timeout cancelled for room {roomId}");
+                }
+            }, cts.Token);
 
             await Clients.Group(roomId).SendAsync("CategoryVotingStarted", new
             {
                 RoomId = roomId,
-                Categories = state.Categories
+                Categories = distinctCategories,
+                TimeoutSeconds = VOTING_TIMEOUT_SECONDS
             });
         }
-
 
         public async Task SubmitCategoryVote(string roomId, string category)
         {
@@ -327,27 +349,45 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            if (!_categoryVotes.TryGetValue(roomId, out var state))
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null)
+            {
+                await Clients.Caller.SendAsync("Error", "Game not found");
+                return;
+            }
+
+            // Check if voting is active
+            if (game.CategoryVotes == null || game.CategoryVotes.Count == 0)
             {
                 await Clients.Caller.SendAsync("Error", "No active voting in this room");
                 return;
             }
 
-            if (!state.Categories.Contains(category))
+            if (!game.CategoryVotes.ContainsKey(category))
             {
                 await Clients.Caller.SendAsync("Error", "Invalid category");
                 return;
             }
 
-            // Save/overwrite player vote
-            state.PlayerVotes[playerId] = category;
+            // Remove old vote if exists
+            if (game.PlayerVotes.TryGetValue(playerId, out var oldCategory))
+            {
+                if (game.CategoryVotes.ContainsKey(oldCategory))
+                {
+                    game.CategoryVotes[oldCategory] = Math.Max(0, game.CategoryVotes[oldCategory] - 1);
+                }
+            }
 
-            // Build tallies
-            var tallies = state.Categories
-                .ToDictionary(
-                    c => c,
-                    c => state.PlayerVotes.Count(v => v.Value == c)
-                );
+            // Add new vote
+            game.PlayerVotes[playerId] = category;
+            game.CategoryVotes[category]++;
+
+            await _gameService.SaveChangesAsync();
+
+            Console.WriteLine($"Player {playerName} (ID: {playerId}) voted for category: {category}");
+
+            // Build tallies from database
+            var tallies = game.CategoryVotes.ToDictionary(kv => kv.Key, kv => kv.Value);
 
             await Clients.Group(roomId).SendAsync("CategoryVoteUpdated", new
             {
@@ -358,7 +398,6 @@ namespace live_trivia.Hubs
                 Tallies = tallies
             });
         }
-
 
         public async Task EndCategoryVoting(string roomId)
         {
@@ -383,43 +422,94 @@ namespace live_trivia.Hubs
                 return;
             }
 
-            if (!_categoryVotes.TryGetValue(roomId, out var state) ||
-                state.PlayerVotes.Count == 0)
+            await FinalizeVoting(roomId, game);
+        }
+
+        private async Task AutoEndVoting(string roomId)
+        {
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null) return;
+
+            await FinalizeVoting(roomId, game);
+        }
+
+        private async Task FinalizeVoting(string roomId, Game game)
+        {
+            if (game.PlayerVotes == null || game.PlayerVotes.Count == 0)
             {
-                await Clients.Caller.SendAsync("Error", "No active votes to finalize");
+                Console.WriteLine($"No votes to finalize for room {roomId}");
+                await Clients.Group(roomId).SendAsync("Error", "No votes were cast");
+
+                // Clear voting state anyway
+                game.CategoryVotes = new Dictionary<string, int>();
+                game.PlayerVotes = new Dictionary<int, string>();
+                await _gameService.SaveChangesAsync();
+                CancelPreviousVotingTimeout(roomId);
                 return;
             }
 
-            // Determine winner (simple max; tie-breaker = first)
-            var winningCategory = state.PlayerVotes
-                .GroupBy(v => v.Value)
-                .OrderByDescending(g => g.Count())
-                .ThenBy(g => g.Key)
-                .First()
-                .Key;
+            // Determine winner from database
+            var winningCategory = game.CategoryVotes
+                .Where(kv => kv.Value > 0)
+                .OrderByDescending(kv => kv.Value)
+                .ThenBy(kv => kv.Key) // Alphabetical tie-breaker
+                .FirstOrDefault();
 
-            // Update GameSettings using existing service
+            if (winningCategory.Key == null)
+            {
+                // No votes cast
+                Console.WriteLine($"No valid votes for room {roomId}");
+                await Clients.Group(roomId).SendAsync("Error", "No valid votes were cast");
+
+                game.CategoryVotes = new Dictionary<string, int>();
+                game.PlayerVotes = new Dictionary<int, string>();
+                await _gameService.SaveChangesAsync();
+                CancelPreviousVotingTimeout(roomId);
+                return;
+            }
+
+            Console.WriteLine($"Voting finished for room {roomId}. Winner: {winningCategory.Key} with {winningCategory.Value} votes");
+
+            // Update GameSettings
             var settings = await _gameService.GetGameSettingsAsync(roomId);
             if (settings != null)
             {
                 var dto = new Dtos.GameSettingsDto
                 {
-                    Category = winningCategory,
+                    Category = winningCategory.Key,
                     Difficulty = settings.Difficulty,
                     QuestionCount = settings.QuestionCount,
                     TimeLimitSeconds = settings.TimeLimitSeconds
                 };
 
                 await _gameService.UpdateGameSettingsAsync(roomId, dto);
+                Console.WriteLine($"Updated game settings for room {roomId} with category: {winningCategory.Key}");
             }
 
-            _categoryVotes.Remove(roomId);
+            // Clear voting data
+            game.CategoryVotes = new Dictionary<string, int>();
+            game.PlayerVotes = new Dictionary<int, string>();
+            await _gameService.SaveChangesAsync();
+
+            // Cancel timeout
+            CancelPreviousVotingTimeout(roomId);
 
             await Clients.Group(roomId).SendAsync("CategoryVotingFinished", new
             {
                 RoomId = roomId,
-                WinningCategory = winningCategory
+                WinningCategory = winningCategory.Key,
+                VoteCount = winningCategory.Value
             });
+        }
+
+        private void CancelPreviousVotingTimeout(string roomId)
+        {
+            if (_votingTimeouts.TryGetValue(roomId, out var existingCts))
+            {
+                existingCts.Cancel();
+                existingCts.Dispose();
+                _votingTimeouts.Remove(roomId);
+            }
         }
     }
 }

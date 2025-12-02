@@ -488,3 +488,227 @@
         font-size: 11px;
     }
 }
+
+/* OR Divider */
+.or-divider {
+    display: flex;
+    align-items: center;
+    margin: 24px 0;
+    color: #c9d7e6;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.or-divider::before,
+.or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(156, 200, 255, 0.2), transparent);
+}
+
+.or-divider span {
+    padding: 0 16px;
+}
+
+/* Voting Start Section */
+.voting-start {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.voting-start label {
+    display: block;
+    margin-bottom: 0;
+    font-size: 14px;
+    color: #c9d7e6;
+    font-weight: 500;
+}
+
+.start-voting-button {
+    background: linear-gradient(135deg, #6e7bff, #58c3ff);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(110, 123, 255, 0.3);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.start-voting-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(110, 123, 255, 0.4);
+}
+
+.start-voting-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Voting Panel */
+.voting-panel {
+    background: rgba(20, 28, 36, 0.4);
+    border: 1px solid rgba(156, 200, 255, 0.2);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.voting-panel h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #eaf2f8;
+    font-weight: 600;
+}
+
+.voting-panel>p {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    color: #c9d7e6;
+    opacity: 0.9;
+}
+
+/* Voting Options Grid */
+.voting-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.vote-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: rgba(20, 28, 36, 0.4);
+    border: 2px solid rgba(156, 200, 255, 0.2);
+    border-radius: 10px;
+    padding: 14px 12px;
+    color: #c9d7e6;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.vote-option:hover {
+    background: rgba(20, 28, 36, 0.6);
+    border-color: rgba(156, 200, 255, 0.4);
+    color: #eaf2f8;
+    transform: translateY(-2px);
+}
+
+.vote-option.selected {
+    background: linear-gradient(135deg, #6e7bff, #58c3ff);
+    border-color: #6e7bff;
+    color: white;
+    box-shadow: 0 4px 16px rgba(110, 123, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.vote-option span {
+    display: block;
+}
+
+.vote-option small {
+    font-size: 11px;
+    opacity: 0.8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.vote-option.selected small {
+    opacity: 1;
+}
+
+/* Finish Voting Button */
+.finish-voting-button {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.finish-voting-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(46, 204, 113, 0.4);
+}
+
+.finish-voting-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Voting Timeout Indicator */
+.voting-timeout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(243, 156, 18, 0.1);
+    border: 1px solid rgba(243, 156, 18, 0.3);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    color: #f39c12;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.voting-timeout svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .voting-options {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .vote-option {
+        padding: 12px 10px;
+        font-size: 13px;
+    }
+
+    .or-divider {
+        margin: 20px 0;
+        font-size: 13px;
+    }
+
+    .voting-panel {
+        padding: 16px;
+    }
+
+    .start-voting-button,
+    .finish-voting-button {
+        padding: 12px 24px;
+        font-size: 14px;
+    }
+}

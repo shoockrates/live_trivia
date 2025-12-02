@@ -53,7 +53,6 @@ namespace live_trivia.Controllers
             var game = await _gameService.CreateGameAsync(roomId, player);
             await _gameService.AddExistingPlayerToGameAsync(game, player);
 
-
             return Created($"/games/{roomId}", game);
         }
 
@@ -133,7 +132,6 @@ namespace live_trivia.Controllers
             return Ok(new { message = "Moved to next question.", questionIndex = game.CurrentQuestionIndex });
         }
 
-
         [HttpPost("{roomId}/join")]
         [Authorize]
         public async Task<IActionResult> JoinGame(string roomId)
@@ -172,6 +170,7 @@ namespace live_trivia.Controllers
 
             return Ok(existingPlayer);
         }
+
         [HttpPost("{roomId}/answer")]
         [Authorize]
         public async Task<IActionResult> SubmitAnswer(string roomId, [FromBody] AnswerRequest request)
@@ -277,25 +276,8 @@ namespace live_trivia.Controllers
             return Ok(new { message = "Game deleted successfully." });
         }
 
-        [HttpPost("{roomId}/vote")]
-        [Authorize]
-        public async Task<IActionResult> SubmitVote(string roomId, [FromBody] VoteRequest request)
-        { 
-            var playerIdClaim = User.FindFirst("playerId");
-            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
-            {
-                return Unauthorized("Authenticated player identity not found.");
-            }
-
-            try
-            {
-                await _gameService.RecordCategoryVoteAsync(roomId, playerId, request.Category); 
-                return Ok(new { message = $"Vote for {request.Category} recorded." });
-            }
-            catch (TriviaException ex)
-            {
-                return StatusCode(ex.StatusCode, new { message = ex.Message }); 
-            }
-        }
+        // REMOVED: [HttpPost("{roomId}/vote")] endpoint
+        // Category voting is now handled exclusively through SignalR (GameHub)
+        // This prevents duplicate functionality and ensures real-time synchronization
     }
 }

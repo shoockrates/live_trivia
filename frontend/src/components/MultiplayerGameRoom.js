@@ -45,6 +45,11 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         let gameStartedHandler;
         let gameStartFailedHandler;
 
+
+        let votingStartedHandler;
+        let voteUpdatedHandler;
+        let votingFinishedHandler;
+
         const initializeConnection = async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -103,32 +108,47 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 signalRService.onGameStartFailed(gameStartFailedHandler);
 
 
-                signalRService.onCategoryVotingStarted((data) => {
+                votingStartedHandler = (data) => {
                     console.log('CategoryVotingStarted', data);
+                    if (!mounted.current) return;
+
                     setIsVoting(true);
                     setVotingCategories(data.categories || data.Categories || []);
                     setVoteTallies({});
                     setMyVote(null);
-                });
+                };
 
-                signalRService.onCategoryVoteUpdated((data) => {
+                voteUpdatedHandler = (data) => {
                     console.log('CategoryVoteUpdated', data);
-                    setVoteTallies(data.tallies || data.Tallies || {});
-                    if (data.playerId === user.playerId) {
-                        setMyVote(data.selectedCategory || data.SelectedCategory);
-                    }
-                });
+                    if (!mounted.current) return;
 
-                signalRService.onCategoryVotingFinished((data) => {
+                    const tallies = data.tallies || data.Tallies || {};
+                    setVoteTallies(tallies);
+
+                    const eventPlayerId = data.playerId ?? data.PlayerId;
+                    const selectedCategory = data.selectedCategory ?? data.SelectedCategory;
+
+                    if (parseInt(eventPlayerId) === parseInt(user.playerId)) {
+                        setMyVote(selectedCategory);
+                    }
+                };
+
+                votingFinishedHandler = (data) => {
                     console.log('CategoryVotingFinished', data);
+                    if (!mounted.current) return;
+
                     const winning = data.winningCategory || data.WinningCategory;
                     setIsVoting(false);
                     setVotingCategories([]);
                     setVoteTallies({});
                     setMyVote(null);
-                    // Reflect winning category in local UI
                     setSelectedCategory(winning);
-                });
+                };
+
+                signalRService.onCategoryVotingStarted(votingStartedHandler);
+                signalRService.onCategoryVoteUpdated(voteUpdatedHandler);
+                signalRService.onCategoryVotingFinished(votingFinishedHandler);
+
 
                 listenersRegistered.current = true;
 
@@ -196,6 +216,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
         initializeConnection();
 
+
         return () => {
             if (listenersRegistered.current) {
                 if (playerJoinedHandler) {
@@ -210,10 +231,21 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 if (gameStartFailedHandler) {
                     signalRService.removeListener('GameStartFailed', gameStartFailedHandler);
                 }
+                if (votingStartedHandler) {
+                    signalRService.removeListener('CategoryVotingStarted', votingStartedHandler);
+                }
+                if (voteUpdatedHandler) {
+                    signalRService.removeListener('CategoryVoteUpdated', voteUpdatedHandler);
+                }
+                if (votingFinishedHandler) {
+                    signalRService.removeListener('CategoryVotingFinished', votingFinishedHandler);
+                }
+
                 listenersRegistered.current = false;
             }
             connectionInitialized.current = false;
         };
+
     }, [roomCode, user.playerId, onStartGame]);
 
     useEffect(() => {
@@ -382,6 +414,45 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         }
     };
 
+
+    const handleStartVoting = async () => {
+        try {
+            // Use all existing categories as voting options
+            const options = categories.length > 0 ? categories : [];
+
+            if (options.length === 0) {
+                setError('No categories available to vote on');
+                return;
+            }
+
+            await signalRService.startCategoryVoting(roomCode, options);
+            setError('');
+        } catch (err) {
+            console.error('Failed to start voting:', err);
+            setError('Failed to start category voting');
+        }
+    };
+
+    const handleVote = async (category) => {
+        try {
+            await signalRService.submitCategoryVote(roomCode, category);
+            setError('');
+        } catch (err) {
+            console.error('Failed to submit vote:', err);
+            setError('Failed to submit vote');
+        }
+    };
+
+    const handleEndVoting = async () => {
+        try {
+            await signalRService.endCategoryVoting(roomCode);
+            setError('');
+        } catch (err) {
+            console.error('Failed to end voting:', err);
+            setError('Failed to end voting');
+        }
+    };
+
     const copyRoomCode = () => {
         navigator.clipboard.writeText(roomCode);
         const btn = document.querySelector('.copy-button');
@@ -398,7 +469,13 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         onBack();
     };
 
-    const shouldShowGameSetup = (gameState === 'waiting' || gameState === 'waitingforplayers') && isHost;
+
+
+
+    const isWaitingState =
+        gameState === 'waiting' || gameState === 'waitingforplayers';
+
+    const shouldShowGameSetup = isWaitingState && isHost;
 
     return (
         <div className="multiplayer-game-room-container">
@@ -465,39 +542,74 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     </div>
                 </div>
 
+
+
                 {shouldShowGameSetup && (
                     <div className="game-setup">
                         <h3>Game Settings</h3>
-                        <div className="category-selection">
-                            <label>Select Category</label>
-                            {loadingCategories ? (
-                                <div className="loading-categories">
-                                    <div className="loading-spinner-small"></div>
-                                    <span>Loading categories...</span>
-                                </div>
-                            ) : categories.length > 0 ? (
-                                <div className="category-grid">
-                                    {categories.map((category) => (
-                                        <button
-                                            key={category}
-                                            className={`category-button ${selectedCategory === category ? 'selected' : ''}`}
-                                            onClick={() => setSelectedCategory(category)}
-                                        >
-                                            {category}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="no-categories-message">
-                                    <span>No categories available</span>
-                                </div>
-                            )}
-                        </div>
 
+                        {/* When voting is NOT active: manual selection + OR + start voting */}
+                        {!isVoting && (
+                            <>
+                                <div className="category-selection">
+                                    <label>Select Category</label>
+                                    {loadingCategories ? (
+                                        <div className="loading-categories">
+                                            <div className="loading-spinner-small"></div>
+                                            <span>Loading categories...</span>
+                                        </div>
+                                    ) : categories.length > 0 ? (
+                                        <div className="category-grid">
+                                            {categories.map((category) => (
+                                                <button
+                                                    key={category}
+                                                    className={`category-button ${selectedCategory === category ? 'selected' : ''}`}
+                                                    onClick={() => setSelectedCategory(category)}
+                                                >
+                                                    {category}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="no-categories-message">
+                                            <span>No categories available</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {isHost && (
+                                    <>
+                                        <div className="or-divider">
+                                            <span>OR</span>
+                                        </div>
+
+                                        <div className="voting-start">
+                                            <label>Let players vote for category</label>
+                                            <button
+                                                className="start-voting-button"
+                                                onClick={handleStartVoting}
+                                                disabled={players.length < 2 || categories.length === 0}
+                                            >
+                                                Start Category Voting
+                                            </button>
+                                            {players.length < 2 && (
+                                                <div className="info-message">
+                                                    <span>Need at least 2 players to vote.</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </>
+                        )}
+
+
+
+                        {/* Start game works with either manually selected or voted category */}
                         <button
                             className="start-game-button"
                             onClick={handleStartGame}
-                            disabled={!selectedCategory || loading || players.length < 2}
+                            disabled={!selectedCategory || loading || players.length < 2 || isVoting}
                         >
                             {loading ? (
                                 <>
@@ -517,14 +629,49 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     </div>
                 )}
 
-                {gameState === 'waiting' && !isHost && (
+                {isWaitingState && isVoting && (
+                    <div className="voting-panel">
+                        <h4>Category Voting in Progress</h4>
+                        <p>Tap a category to vote:</p>
+                        <div className="voting-options">
+                            {votingCategories.map((cat) => (
+                                <button
+                                    key={cat}
+                                    className={`vote-option ${myVote === cat ? 'selected' : ''}`}
+                                    onClick={() => handleVote(cat)}
+                                >
+                                    <span>{cat}</span>
+                                    <small>
+                                        {(voteTallies[cat] || 0)} vote
+                                        {(voteTallies[cat] || 0) !== 1 ? 's' : ''}
+                                    </small>
+                                </button>
+                            ))}
+                        </div>
+
+                        {isHost && (
+                            <button
+                                className="finish-voting-button"
+                                onClick={handleEndVoting}
+                            >
+                                Finish Voting & Use Winner
+                            </button>
+                        )}
+                    </div>
+                )}
+
+
+                {isWaitingState && !isHost && !isVoting && (
                     <div className="waiting-message">
                         <div className="waiting-spinner"></div>
                         <p>Waiting for host to start the game...</p>
                         <p className="players-count">Players in room: {players.length}</p>
-                        {selectedCategory && <p className="category-info">Category: {selectedCategory}</p>}
+                        {selectedCategory && (
+                            <p className="category-info">Category: {selectedCategory}</p>
+                        )}
                     </div>
                 )}
+
 
                 {gameState === 'in-progress' && (
                     <div className="game-in-progress">
