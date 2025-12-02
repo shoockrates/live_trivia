@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-namespace live_trivia;
+﻿namespace live_trivia;
 
 public class Game : BaseEntity
 {
@@ -16,13 +15,30 @@ public class Game : BaseEntity
     public virtual ICollection<PlayerAnswer> PlayerAnswers { get; set; } = new List<PlayerAnswer>();
     public virtual ICollection<Question> Questions { get; set; } = new List<Question>();
 
-    public Dictionary<int, string> PlayerVotes { get; set; } = new Dictionary<int, string>();
-    public Dictionary<string, int> CategoryVotes { get; set; } = new Dictionary<string, int>();
+    // Category voting dictionaries - initialized to prevent null references
+    private Dictionary<int, string>? _playerVotes;
+    private Dictionary<string, int>? _categoryVotes;
 
-    public Game() { }
+    public Dictionary<int, string> PlayerVotes
+    {
+        get => _playerVotes ?? new Dictionary<int, string>();
+        set => _playerVotes = value ?? new Dictionary<int, string>();
+    }
 
-    public Game(string roomId)
-    { 
+    public Dictionary<string, int> CategoryVotes
+    {
+        get => _categoryVotes ?? new Dictionary<string, int>();
+        set => _categoryVotes = value ?? new Dictionary<string, int>();
+    }
+
+    public Game()
+    {
+        _playerVotes = new Dictionary<int, string>();
+        _categoryVotes = new Dictionary<string, int>();
+    }
+
+    public Game(string roomId) : this()
+    {
         this.RoomId = roomId;
     }
 
@@ -120,5 +136,38 @@ public class Game : BaseEntity
             }
         }
     }
-}
 
+    // Voting helper methods
+    public bool IsVotingActive()
+    {
+        return CategoryVotes.Count > 0;
+    }
+
+    public void StartVoting(List<string> categories)
+    {
+        if (categories == null || categories.Count == 0)
+            throw new ArgumentException("Categories cannot be null or empty", nameof(categories));
+
+        CategoryVotes = categories.Distinct().ToDictionary(c => c, c => 0);
+        PlayerVotes = new Dictionary<int, string>();
+    }
+
+    public void ClearVoting()
+    {
+        CategoryVotes = new Dictionary<string, int>();
+        PlayerVotes = new Dictionary<int, string>();
+    }
+
+    public string? GetWinningCategory()
+    {
+        if (CategoryVotes.Count == 0 || PlayerVotes.Count == 0)
+            return null;
+
+        return CategoryVotes
+            .Where(kv => kv.Value > 0)
+            .OrderByDescending(kv => kv.Value)
+            .ThenBy(kv => kv.Key)
+            .FirstOrDefault()
+            .Key;
+    }
+}

@@ -160,6 +160,29 @@ class SignalRService {
         this.registerListener('GameStartFailed', callback);
     }
 
+
+    // Voting-related listeners
+    onCategoryVotingStarted(callback) {
+        this.registerListener('CategoryVotingStarted', callback);
+    }
+
+    onCategoryVoteUpdated(callback) {
+        this.registerListener('CategoryVoteUpdated', callback);
+    }
+
+    onCategoryVotingFinished(callback) {
+        this.registerListener('CategoryVotingFinished', callback);
+    }
+
+
+    onCategoryRevoteStarted(callback) {
+        this.registerListener('CategoryRevoteStarted', callback);
+    }
+
+    onCategoryVotingTimer(callback) {
+        this.registerListener('CategoryVotingTimer', callback);
+    }
+
     // Generic listener registration
     registerListener(eventName, callback) {
         if (!this.connection) {
@@ -295,6 +318,49 @@ class SignalRService {
             await this.connectionPromise;
         } else {
             throw new Error('Connection not started');
+        }
+    }
+
+
+    async startCategoryVoting(roomId, categories) {
+        if (!this.connection || !this.isConnected) {
+            throw new Error('SignalR connection not established');
+        }
+
+        try {
+            await this.connection.invoke('StartCategoryVoting', roomId, categories);
+            console.log('StartCategoryVoting invoked', { roomId, categories });
+        } catch (error) {
+            console.error('Error starting category voting:', error);
+            throw error;
+        }
+    }
+
+    async submitCategoryVote(roomId, category) {
+        if (!this.connection || !this.isConnected) {
+            throw new Error('SignalR connection not established');
+        }
+
+        try {
+            await this.connection.invoke('SubmitCategoryVote', roomId, category);
+            console.log('SubmitCategoryVote invoked', { roomId, category });
+        } catch (error) {
+            console.error('Error submitting category vote:', error);
+            throw error;
+        }
+    }
+
+    async endCategoryVoting(roomId) {
+        if (!this.connection || !this.isConnected) {
+            throw new Error('SignalR connection not established');
+        }
+
+        try {
+            await this.connection.invoke('EndCategoryVoting', roomId);
+            console.log('EndCategoryVoting invoked', { roomId });
+        } catch (error) {
+            console.error('Error ending category voting:', error);
+            throw error;
         }
     }
 }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using live_trivia.Repositories;
 using live_trivia.Interfaces;
+using System.Collections.Concurrent;
+using live_trivia.Dtos;
 
 namespace live_trivia.Hubs
 {
@@ -11,6 +13,9 @@ namespace live_trivia.Hubs
         private readonly IGameService _gameService;
         private readonly GamesRepository _gamesRepository;
         private readonly IActiveGamesService _activeGamesService;
+
+        private static readonly ConcurrentDictionary<string, CategoryVotingState> _categoryVotingStates
+            = new();
 
         public GameHub(IGameService gameService, GamesRepository gamesRepository, IActiveGamesService activeGamesService)
         {
@@ -264,6 +269,246 @@ namespace live_trivia.Hubs
             }
 
             await base.OnDisconnectedAsync(exception);
+        }
+
+        // CATEGORY VOTING METHODS
+
+        public async Task StartCategoryVoting(string roomId, List<string> categories)
+        {
+            var playerId = await GetCurrentPlayerId();
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null) return;
+
+            if (game.HostPlayerId != playerId)
+            {
+                await Clients.Caller.SendAsync("Error", "Only host can start voting");
+                return;
+            }
+
+            var state = new CategoryVotingState
+            {
+                RoomId = roomId,
+                Categories = categories.Distinct().ToList(),
+                PlayerVotes = new Dictionary<int, string>(),
+                Round = 1,
+                StartedAt = DateTime.UtcNow,
+                DurationSeconds = 60
+            };
+
+            _categoryVotingStates[roomId] = state;
+
+            await Clients.Group(roomId).SendAsync("CategoryVotingStarted", new
+            {
+                Categories = state.Categories,
+                Round = state.Round,
+                DurationSeconds = state.DurationSeconds
+            });
+
+            _ = Task.Run(async () =>
+            {
+                var endAt = state.StartedAt.AddSeconds(state.DurationSeconds);
+                while (DateTime.UtcNow < endAt)
+                {
+                    var remaining = (int)(endAt - DateTime.UtcNow).TotalSeconds;
+                    if (remaining < 0) remaining = 0;
+
+                    await Clients.Group(roomId).SendAsync("CategoryVotingTimer", new
+                    {
+                        RemainingSeconds = remaining
+                    });
+
+                    if (remaining == 0) break;
+                    await Task.Delay(1000);
+                }
+
+                // Auto-end if still active
+                if (_categoryVotingStates.ContainsKey(roomId))
+                {
+                    await EndCategoryVoting(roomId);
+                }
+            });
+        }
+
+        public async Task SubmitCategoryVote(string roomId, string category)
+        {
+            var playerId = await GetCurrentPlayerId();
+
+            if (!_categoryVotingStates.TryGetValue(roomId, out var state))
+                return;
+
+            if (!state.Categories.Contains(category))
+                return;
+
+            state.PlayerVotes[playerId] = category;
+
+            var tallies = state.Categories
+                .ToDictionary(c => c, c => state.PlayerVotes.Values.Count(v => v == c));
+
+            await Clients.Group(roomId).SendAsync("CategoryVoteUpdated", new
+            {
+                Tallies = tallies,
+                PlayerId = playerId,
+                SelectedCategory = category,
+                Round = state.Round
+            });
+        }
+
+        public async Task EndCategoryVoting(string roomId)
+        {
+            var playerId = await GetCurrentPlayerId();
+            var game = await _gameService.GetGameAsync(roomId);
+            if (game == null) return;
+
+            if (game.HostPlayerId != playerId)
+            {
+                await Clients.Caller.SendAsync("Error", "Only the host can end voting");
+                return;
+            }
+
+            if (!_categoryVotingStates.TryGetValue(roomId, out var state))
+                return;
+
+            var tallies = state.Categories
+                .ToDictionary(c => c, c => state.PlayerVotes.Values.Count(v => v == c));
+
+            var maxVotes = tallies.Values.DefaultIfEmpty(0).Max();
+            var topCategories = tallies
+                .Where(kv => kv.Value == maxVotes && maxVotes > 0)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            if (topCategories.Count == 0)
+            {
+                // No votes at all – just let host pick freely
+                await Clients.Group(roomId).SendAsync("CategoryVotingFinished", new
+                {
+                    WinningCategory = (string?)null,
+                    Round = state.Round,
+                    IsTie = false,
+                    IsFinal = false,
+                    TiedCategories = new List<string>()
+                });
+
+                _categoryVotingStates.TryRemove(roomId, out _);
+                return;
+            }
+
+            // CASE 1: clear winner
+            if (topCategories.Count == 1)
+            {
+                var winner = topCategories[0];
+
+                // Get current settings to preserve other fields
+                var currentSettings = await _gameService.GetGameSettingsAsync(roomId);
+
+                var gameSettingsDto = new GameSettingsDto
+                {
+                    Category = winner,
+                    Difficulty = currentSettings?.Difficulty ?? "any",
+                    QuestionCount = currentSettings?.QuestionCount ?? 5,
+                    TimeLimitSeconds = currentSettings?.TimeLimitSeconds ?? 30
+                };
+
+                await _gameService.UpdateGameSettingsAsync(roomId, gameSettingsDto);
+
+                await Clients.Group(roomId).SendAsync("CategoryVotingFinished", new
+                {
+                    WinningCategory = winner,
+                    Round = state.Round,
+                    IsTie = false,
+                    IsFinal = true,
+                    TiedCategories = new List<string>()
+                });
+
+                _categoryVotingStates.TryRemove(roomId, out _);
+                return;
+            }
+
+            // CASE 2: tie
+            if (state.Round == 1)
+            {
+                // First tie -> revote only among tied categories
+                state.Round = 2;
+                state.Categories = topCategories;
+                state.PlayerVotes.Clear();
+                state.StartedAt = DateTime.UtcNow;
+
+                await Clients.Group(roomId).SendAsync("CategoryRevoteStarted", new
+                {
+                    Categories = state.Categories,
+                    Round = state.Round,
+                    TiedCategories = topCategories,
+                    DurationSeconds = state.DurationSeconds
+                });
+
+                _ = Task.Run(async () =>
+                {
+                    var endAt = state.StartedAt.AddSeconds(state.DurationSeconds);
+                    while (DateTime.UtcNow < endAt)
+                    {
+                        var remaining = (int)(endAt - DateTime.UtcNow).TotalSeconds;
+                        if (remaining < 0) remaining = 0;
+
+                        await Clients.Group(roomId).SendAsync("CategoryVotingTimer", new
+                        {
+                            RemainingSeconds = remaining
+                        });
+
+                        if (remaining == 0) break;
+                        await Task.Delay(1000);
+                    }
+
+                    if (_categoryVotingStates.ContainsKey(roomId))
+                    {
+                        await EndCategoryVoting(roomId);
+                    }
+                });
+
+                return;
+            }
+
+            // CASE 3: tie again in round 2 -> host decides
+            var hostVote = state.PlayerVotes.TryGetValue(game.HostPlayerId!.Value, out var hostChoice)
+                && topCategories.Contains(hostChoice)
+                ? hostChoice
+                : topCategories.First();
+
+            // Get current settings to preserve other fields
+            var existingGameSettings = await _gameService.GetGameSettingsAsync(roomId);
+
+            var updatedSettings = new GameSettingsDto
+            {
+                Category = hostVote,
+                Difficulty = existingGameSettings?.Difficulty ?? "any",
+                QuestionCount = existingGameSettings?.QuestionCount ?? 5,
+                TimeLimitSeconds = existingGameSettings?.TimeLimitSeconds ?? 30
+            };
+
+            await _gameService.UpdateGameSettingsAsync(roomId, updatedSettings);
+
+            await Clients.Group(roomId).SendAsync("CategoryVotingFinished", new
+            {
+                WinningCategory = hostVote,
+                Round = state.Round,
+                IsTie = true,
+                IsFinal = true,
+                TiedCategories = topCategories
+            });
+
+            _categoryVotingStates.TryRemove(roomId, out _);
+        }
+
+        private Task<int> GetCurrentPlayerId()
+        {
+            var playerIdClaim = Context.User?.FindFirst("playerId");
+
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                // HubException will go back to the caller as an error
+                throw new HubException("Player identity not found");
+            }
+
+            return Task.FromResult(playerId);
         }
     }
 }
