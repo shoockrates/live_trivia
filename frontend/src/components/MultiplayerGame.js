@@ -16,12 +16,15 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     const [finalResults, setFinalResults] = useState(null);
     const [correctAnswerCount, setCorrectAnswerCount] = useState(0);
     const [wrongAnswerCount, setWrongAnswerCount] = useState(0);
+    const [isCategoryLocked, setIsCategoryLocked] = useState(false);
 
     const correctAnswerCountRef = useRef(0);
     const wrongAnswerCountRef = useRef(0);
     const statsUpdatedRef = useRef(false);
     const listenersRegistered = useRef(false);
     const mounted = useRef(true);
+
+    const votingTimerRef = useRef(null);
 
     useEffect(() => {
         mounted.current = true;

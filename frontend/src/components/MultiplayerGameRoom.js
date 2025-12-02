@@ -16,10 +16,13 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
 
+    const [isCategoryLocked, setIsCategoryLocked] = useState(false);
     const [isVoting, setIsVoting] = useState(false);
     const [votingCategories, setVotingCategories] = useState([]);
     const [voteTallies, setVoteTallies] = useState({});
     const [myVote, setMyVote] = useState(null);
+    const [votingSecondsLeft, setVotingSecondsLeft] = useState(null);
+    const votingTimerRef = useRef(null);
 
     const listenersRegistered = useRef(false);
     const mounted = useRef(true);
@@ -108,6 +111,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 signalRService.onGameStartFailed(gameStartFailedHandler);
 
 
+
                 votingStartedHandler = (data) => {
                     console.log('CategoryVotingStarted', data);
                     if (!mounted.current) return;
@@ -116,7 +120,28 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     setVotingCategories(data.categories || data.Categories || []);
                     setVoteTallies({});
                     setMyVote(null);
+
+                    // --- start 60s countdown ---
+                    setIsCategoryLocked(false);            // unlock while voting
+                    setVotingSecondsLeft(60);
+
+                    if (votingTimerRef.current) {
+                        clearInterval(votingTimerRef.current);
+                    }
+
+                    votingTimerRef.current = setInterval(() => {
+                        setVotingSecondsLeft(prev => {
+                            if (prev === null) return prev;
+                            if (prev <= 1) {
+                                clearInterval(votingTimerRef.current);
+                                votingTimerRef.current = null;
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
                 };
+
 
                 voteUpdatedHandler = (data) => {
                     console.log('CategoryVoteUpdated', data);
@@ -133,17 +158,40 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     }
                 };
 
+
+
                 votingFinishedHandler = (data) => {
                     console.log('CategoryVotingFinished', data);
                     if (!mounted.current) return;
 
                     const winning = data.winningCategory || data.WinningCategory;
+                    const tiedCategories = data.tiedCategories || data.TiedCategories || [];
+                    const isTie = Array.isArray(tiedCategories) && tiedCategories.length > 1;
+
                     setIsVoting(false);
                     setVotingCategories([]);
                     setVoteTallies({});
                     setMyVote(null);
-                    setSelectedCategory(winning);
+                    setVotingSecondsLeft(null);
+                    if (votingTimerRef.current) {
+                        clearInterval(votingTimerRef.current);
+                        votingTimerRef.current = null;
+                    }
+
+                    if (winning && !isTie) {
+                        // normal case: single winner → lock
+                        setSelectedCategory(winning);
+                        setIsCategoryLocked(true);
+                    } else if (isTie) {
+                        // TODO: tie logic:
+                        // e.g. let host choose among tiedCategories or trigger a revote
+                        // For now, just keep category unlocked and optionally:
+                        // setVotingCategories(tiedCategories);
+                        setIsCategoryLocked(false);
+                    }
                 };
+
+
 
                 signalRService.onCategoryVotingStarted(votingStartedHandler);
                 signalRService.onCategoryVoteUpdated(voteUpdatedHandler);
@@ -239,6 +287,11 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 }
                 if (votingFinishedHandler) {
                     signalRService.removeListener('CategoryVotingFinished', votingFinishedHandler);
+                }
+
+                if (votingTimerRef.current) {
+                    clearInterval(votingTimerRef.current);
+                    votingTimerRef.current = null;
                 }
 
                 listenersRegistered.current = false;
@@ -561,13 +614,18 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                                     ) : categories.length > 0 ? (
                                         <div className="category-grid">
                                             {categories.map((category) => (
+
                                                 <button
                                                     key={category}
                                                     className={`category-button ${selectedCategory === category ? 'selected' : ''}`}
-                                                    onClick={() => setSelectedCategory(category)}
+                                                    onClick={() => {
+                                                        if (isCategoryLocked) return;
+                                                        setSelectedCategory(category);
+                                                    }}
                                                 >
                                                     {category}
                                                 </button>
+
                                             ))}
                                         </div>
                                     ) : (
@@ -629,10 +687,22 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     </div>
                 )}
 
+
                 {isWaitingState && isVoting && (
                     <div className="voting-panel">
                         <h4>Category Voting in Progress</h4>
                         <p>Tap a category to vote:</p>
+
+                        {typeof votingSecondsLeft === 'number' && (
+                            <div className="voting-timeout">
+                                <svg viewBox="0 0 16 16">
+                                    <circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" />
+                                    <path d="M8 3v5l3 2" stroke="currentColor" fill="none" />
+                                </svg>
+                                <span>Voting ends in {votingSecondsLeft}s</span>
+                            </div>
+                        )}
+
                         <div className="voting-options">
                             {votingCategories.map((cat) => (
                                 <button
@@ -648,7 +718,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                                 </button>
                             ))}
                         </div>
-
                         {isHost && (
                             <button
                                 className="finish-voting-button"
@@ -659,6 +728,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         )}
                     </div>
                 )}
+
 
 
                 {isWaitingState && !isHost && !isVoting && (
