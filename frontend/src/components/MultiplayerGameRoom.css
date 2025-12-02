@@ -290,7 +290,7 @@
 }
 
 .start-game-button {
-    padding-top: 16px;
+    margin-top: 16px;
     background: linear-gradient(135deg, #2ecc71, #27ae60);
     color: #ffffff;
     border: none;

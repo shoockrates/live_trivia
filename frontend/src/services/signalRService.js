@@ -174,6 +174,15 @@ class SignalRService {
         this.registerListener('CategoryVotingFinished', callback);
     }
 
+
+    onCategoryRevoteStarted(callback) {
+        this.registerListener('CategoryRevoteStarted', callback);
+    }
+
+    onCategoryVotingTimer(callback) {
+        this.registerListener('CategoryVotingTimer', callback);
+    }
+
     // Generic listener registration
     registerListener(eventName, callback) {
         if (!this.connection) {
