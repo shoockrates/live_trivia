@@ -277,5 +277,25 @@ namespace live_trivia.Controllers
             return Ok(new { message = "Game deleted successfully." });
         }
 
+        [HttpPost("{roomId}/vote")]
+        [Authorize]
+        public async Task<IActionResult> SubmitVote(string roomId, [FromBody] VoteRequest request)
+        { 
+            var playerIdClaim = User.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
+            {
+                return Unauthorized("Authenticated player identity not found.");
+            }
+
+            try
+            {
+                await _gameService.RecordCategoryVoteAsync(roomId, playerId, request.Category); 
+                return Ok(new { message = $"Vote for {request.Category} recorded." });
+            }
+            catch (TriviaException ex)
+            {
+                return StatusCode(ex.StatusCode, new { message = ex.Message }); 
+            }
+        }
     }
 }

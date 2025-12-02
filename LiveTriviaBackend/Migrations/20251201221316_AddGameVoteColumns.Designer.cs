@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using live_trivia.Data;
@@ -11,9 +12,11 @@ using live_trivia.Data;
 namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
-    partial class TriviaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251201221316_AddGameVoteColumns")]
+    partial class AddGameVoteColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -245,15 +248,9 @@ namespace LiveTriviaBackend.Migrations
                     b.Property<int>("QuestionId")
                         .HasColumnType("integer");
 
-                    b.Property<double>("Score")
-                        .HasColumnType("double precision");
-
                     b.Property<string>("SelectedAnswerIndexes")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("TimeLeft")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

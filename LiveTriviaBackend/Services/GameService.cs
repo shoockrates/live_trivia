@@ -2,6 +2,7 @@ namespace live_trivia.Services;
 using live_trivia.Repositories;
 using live_trivia.Dtos;
 using live_trivia.Interfaces;
+using live_trivia.Exceptions;
 
 public class GameService : IGameService
 {
@@ -116,6 +117,8 @@ public class GameService : IGameService
             CurrentQuestionAnswers = currentQuestion?.Answers,
             CurrentQuestionIndex = game.CurrentQuestionIndex,
             TotalQuestions = questions.Count,
+            CategoryVotes = game.CategoryVotes,
+            PlayerVotes = game.PlayerVotes,
             Players = game.GamePlayers.Select(gp => new GamePlayerDto
             {
                 PlayerId = gp.PlayerId,
@@ -274,5 +277,58 @@ public class GameService : IGameService
             Console.WriteLine($"Error cleaning up game {roomId}: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
+    }
+
+    public async Task RecordCategoryVoteAsync(string roomId, int playerId, string category)
+    {
+        var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true); 
+        
+        if (game == null)
+        {
+            throw new GameNotFoundException(roomId);
+        }
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            throw new GeneralServiceException("Category cannot be empty.");
+        }
+        if (game.State != GameState.WaitingForPlayers)
+        {
+            throw new GameStateException("Votes are only accepted while waiting for players.");
+        }
+
+        if (!game.GamePlayers.Any(gp => gp.PlayerId == playerId))
+        {
+            throw new PlayerNotInGameException(playerId, roomId);
+        }
+
+        string normalizedCategory = NormalizeCategoryName(category);
+
+        // REMOVE OLD VOTE IF EXISTS
+        if (game.PlayerVotes.TryGetValue(playerId, out string? oldCategory))
+        {
+            if (oldCategory.Equals(normalizedCategory, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            if (game.CategoryVotes.ContainsKey(oldCategory))
+            {
+                game.CategoryVotes[oldCategory]--;
+                if (game.CategoryVotes[oldCategory] <= 0)
+                {
+                    game.CategoryVotes.Remove(oldCategory);
+                }
+            }
+        }
+
+        game.PlayerVotes[playerId] = normalizedCategory;
+        if (game.CategoryVotes.ContainsKey(normalizedCategory))
+        {
+            game.CategoryVotes[normalizedCategory]++;
+        }
+        else
+        {
+            game.CategoryVotes.Add(normalizedCategory, 1);
+        }
+        await _gamesRepo.SaveChangesAsync();
     }
 }
