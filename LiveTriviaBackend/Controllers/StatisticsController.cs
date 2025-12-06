@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using live_trivia.Interfaces;
+using live_trivia.Dtos;
 
 namespace live_trivia.Controllers
 {
@@ -48,13 +49,5 @@ namespace live_trivia.Controllers
 
             return Ok("Statistics updated successfully");
         }
-    }
-
-    public record UpdateStatsRequest
-    {
-        public string Category { get; set; } = string.Empty;
-        public int Score { get; set; }
-        public int CorrectAnswers { get; set; }
-        public int TotalQuestions { get; set; }
     }
 }
