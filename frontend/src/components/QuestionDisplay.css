@@ -252,6 +252,12 @@
     border: 1px solid rgba(231, 76, 60, 0.2);
 }
 
+.stat-item.score {
+    background: rgba(156, 200, 255, 0.1);
+    color: #9cc8ff;
+    border: 1px solid rgba(156, 200, 255, 0.2);
+}
+
 .next-button {
     display: flex;
     align-items: center;

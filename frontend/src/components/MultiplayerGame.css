@@ -117,15 +117,47 @@
 
 .player-info {
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.player-name-row {
+    display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
 }
 
 .player-name {
     font-size: 14px;
     color: #eaf2f8;
     font-weight: 500;
+}
+
+.player-score {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #9cc8ff;
+    font-weight: 600;
+}
+
+.player-score svg {
+    width: 14px;
+    height: 14px;
+    fill: #9cc8ff;
+}
+
+.you-badge {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .status-dot {
