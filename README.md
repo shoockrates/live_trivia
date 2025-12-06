@@ -40,7 +40,7 @@
 - Players can join with a guest nickname or a registered account.
 - Registered users can track past performance and stats.
 
-- [ ] 7. Vote System / Voting for Topics
+- [x] 7. Vote System / Voting for Topics
 
 - Before starting, players can vote on which topic to play.
 - Categories are randomized and the are shown to the players to vote on.
@@ -89,10 +89,4 @@ psql -U postgres -c "CREATE DATABASE livetrivia;"
 cd LiveTriviaBackend/
 dotnet run
 ```
-
-Now the questions.json is loaded in your local database
-
 ---
-
-When the program is running you can enter /questions/random to get a random question from the database.<br>
-Or you can type /questions/category/{category} to see all the nifty little questions of a certain category!
