@@ -20,6 +20,7 @@ const QuestionDisplay = ({
     isHost = false,
     answeredPlayers = 0,
     totalPlayers = 1,
+    currentScore = 0,
 }) => {
     const [selectedAnswers, setSelectedAnswers] = useState([]);
     const [isAnswered, setIsAnswered] = useState(false);
@@ -165,6 +166,14 @@ const QuestionDisplay = ({
                             </svg>
                             <span>{wrongCount}</span>
                         </div>
+                        {isMultiplayer && (
+                            <div className="stat-item score">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                                <span>{currentScore} pts</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* HOST: Next Question */}
@@ -255,6 +264,7 @@ QuestionDisplay.defaultProps = {
     isHost: false,
     answeredPlayers: 0,
     totalPlayers: 1,
+    currentScore: 0,
 };
 
 export default QuestionDisplay;

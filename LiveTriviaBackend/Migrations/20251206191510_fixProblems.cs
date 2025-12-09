@@ -5,11 +5,25 @@
 namespace LiveTriviaBackend.Migrations
 {
     /// <inheritdoc />
-    public partial class AddGameVoteColumns : Migration
+    public partial class fixProblems : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<double>(
+                name: "Score",
+                table: "PlayerAnswers",
+                type: "double precision",
+                nullable: false,
+                defaultValue: 0.0);
+
+            migrationBuilder.AddColumn<int>(
+                name: "TimeLeft",
+                table: "PlayerAnswers",
+                type: "integer",
+                nullable: false,
+                defaultValue: 0);
+
             migrationBuilder.AddColumn<string>(
                 name: "CategoryVotes",
                 table: "Games",
@@ -28,6 +42,14 @@ namespace LiveTriviaBackend.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "Score",
+                table: "PlayerAnswers");
+
+            migrationBuilder.DropColumn(
+                name: "TimeLeft",
+                table: "PlayerAnswers");
+
             migrationBuilder.DropColumn(
                 name: "CategoryVotes",
                 table: "Games");

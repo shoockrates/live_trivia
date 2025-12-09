@@ -399,6 +399,10 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     const currentQuestionIndex = gameState.currentQuestionIndex || 0;
     const totalQuestions = allQuestions.length;
     const isLastQuestion = currentQuestionIndex >= totalQuestions - 1;
+    
+    // Calculate current player's score
+    const currentPlayer = players.find(p => p.playerId === parseInt(user.playerId));
+    const currentScore = currentPlayer?.score ?? currentPlayer?.currentScore ?? 0;
 
     if (gameFinished && finalResults) {
         console.log('Rendering MultiplayerResults with:', finalResults);
@@ -428,20 +432,31 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                 <div className="players-status">
                     <h4>Players ({totalPlayersCount})</h4>
                     <div className="players-grid">
-                        {players.map((player) => (
-                            <div key={player.playerId} className="player-status">
-                                <div className="player-avatar-small">
-                                    {player.name?.charAt(0).toUpperCase()}
+                        {players.map((player) => {
+                            const playerScore = player.score ?? player.currentScore ?? 0;
+                            return (
+                                <div key={player.playerId} className="player-status">
+                                    <div className="player-avatar-small">
+                                        {player.name?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="player-info">
+                                        <div className="player-name-row">
+                                            <span className="player-name">{player.name}</span>
+                                            {player.playerId === parseInt(user.playerId) && (
+                                                <span className="you-badge">You</span>
+                                            )}
+                                        </div>
+                                        <div className="player-score">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                            </svg>
+                                            <span>{playerScore} pts</span>
+                                        </div>
+                                    </div>
+                                    <div className={`status-dot ${playerAnswers[player.playerId] ? 'answered' : 'waiting'}`}></div>
                                 </div>
-                                <div className="player-info">
-                                    <span className="player-name">{player.name}</span>
-                                    {player.playerId === parseInt(user.playerId) && (
-                                        <span className="you-badge">You</span>
-                                    )}
-                                </div>
-                                <div className={`status-dot ${playerAnswers[player.playerId] ? 'answered' : 'waiting'}`}></div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                     <div className="answer-progress">
                         {answeredPlayersCount} / {totalPlayersCount} answered
@@ -467,6 +482,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                         answeredPlayers={answeredPlayersCount}
                         totalPlayers={totalPlayersCount}
                         isLastQuestion={isLastQuestion}
+                        currentScore={currentScore}
                     />
                 ) : (
                     <div className="waiting-for-question">

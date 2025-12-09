@@ -12,8 +12,8 @@ using live_trivia.Data;
 namespace LiveTriviaBackend.Migrations
 {
     [DbContext(typeof(TriviaDbContext))]
-    [Migration("20251201221316_AddGameVoteColumns")]
-    partial class AddGameVoteColumns
+    [Migration("20251206191510_fixProblems")]
+    partial class fixProblems
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -248,9 +248,15 @@ namespace LiveTriviaBackend.Migrations
                     b.Property<int>("QuestionId")
                         .HasColumnType("integer");
 
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("SelectedAnswerIndexes")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("TimeLeft")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
