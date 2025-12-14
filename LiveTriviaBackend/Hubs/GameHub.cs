@@ -24,48 +24,30 @@ namespace live_trivia.Hubs
             _activeGamesService = activeGamesService;
         }
 
+
+
         public async Task JoinGameRoom(string roomId)
         {
+            if (string.IsNullOrWhiteSpace(roomId))
+            {
+                await Clients.Caller.SendAsync("Error", "RoomId is required");
+                return;
+            }
+
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+
             try
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-
-                // Get player ID from claims
-                var playerIdClaim = Context.User?.FindFirst("playerId");
-                var playerName = Context.User?.Identity?.Name;
-
-                if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out int playerId))
-                {
-                    await Clients.Caller.SendAsync("Error", "Player identity not found");
-                    return;
-                }
-
-                Console.WriteLine($"Player {playerName} (ID: {playerId}) joined room {roomId}");
-
-                // Get updated game state
                 var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
-                if (gameDetails != null)
-                {
-                    // Notify ALL players in the room about the updated game state
-                    await Clients.Group(roomId).SendAsync("PlayerJoined", new
-                    {
-                        Player = new { Id = playerId, Name = playerName },
-                        GameState = gameDetails,
-                        ConnectionId = Context.ConnectionId,
-                        Timestamp = DateTime.UtcNow
-                    });
-                }
-                else
-                {
-                    await Clients.Caller.SendAsync("Error", "Game not found");
-                }
+                await Clients.Caller.SendAsync("GameStateSync", gameDetails);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in JoinGameRoom: {ex.Message}");
-                await Clients.Caller.SendAsync("Error", "Failed to join game room");
+                await Clients.Caller.SendAsync("Error", ex.Message);
             }
         }
+
+
 
         public async Task LeaveGameRoom(string roomId)
         {
@@ -202,42 +184,29 @@ namespace live_trivia.Hubs
                     return;
                 }
 
-                // Only host can advance
                 if (game.HostPlayerId != playerId)
                 {
                     await Clients.Caller.SendAsync("Error", "Only the host can advance the game");
                     return;
                 }
 
-                // Score current question before moving
                 game.ScoreCurrentQuestion();
                 var moved = game.MoveNextQuestion();
                 await _gameService.SaveChangesAsync();
 
                 if (moved)
                 {
-                    // Get full game details with questions
                     var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
-
-                    // Broadcast to all players in the room
                     await Clients.Group(roomId).SendAsync("NextQuestion", gameDetails);
-
-                    Console.WriteLine($"Broadcasted NextQuestion for room {roomId}, question index: {gameDetails.CurrentQuestionIndex}");
                 }
                 else
                 {
-                    // Game finished
                     var leaderboard = game.GetLeaderboard();
                     await Clients.Group(roomId).SendAsync("GameFinished", new
                     {
                         Leaderboard = leaderboard,
                         FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
                     });
-
-                    // Cleanup game after a short delay, in the same scope
-                    await Task.Delay(5000);
-                    await _gameService.CleanupGameAsync(roomId);
-                    Console.WriteLine($"Cleaned up game room: {roomId}");
                 }
             }
             catch (Exception ex)
@@ -245,6 +214,24 @@ namespace live_trivia.Hubs
                 Console.WriteLine($"Error in NextQuestion: {ex.Message}");
                 await Clients.Caller.SendAsync("Error", $"Error advancing to next question: {ex.Message}");
             }
+        }
+
+        // Add this method to help debug SignalR group membership
+        public async Task CheckGroupMembership(string roomId)
+        {
+            var playerIdClaim = Context.User?.FindFirst("playerId");
+            var playerName = Context.User?.Identity?.Name;
+
+            Console.WriteLine($"[GameHub] Player {playerName} (ID: {playerIdClaim?.Value}) checking group membership for room {roomId}");
+            Console.WriteLine($"[GameHub] ConnectionId: {Context.ConnectionId}");
+
+            await Clients.Caller.SendAsync("GroupMembershipCheck", new
+            {
+                RoomId = roomId,
+                ConnectionId = Context.ConnectionId,
+                PlayerName = playerName,
+                IsInGroup = true // If they can call this method, they're still connected
+            });
         }
 
         public override async Task OnConnectedAsync()

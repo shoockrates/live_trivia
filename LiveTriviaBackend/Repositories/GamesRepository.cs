@@ -88,5 +88,13 @@ namespace live_trivia.Repositories
                 await SaveChangesAsync(); // Call save here instead of in service
             }
         }
+
+
+        public async Task RemoveAnswersForGameAsync(string roomId)
+        {
+            var answers = _context.PlayerAnswers.Where(pa => pa.GameRoomId == roomId);
+            _context.PlayerAnswers.RemoveRange(answers);
+            await SaveChangesAsync();
+        }
     }
 }

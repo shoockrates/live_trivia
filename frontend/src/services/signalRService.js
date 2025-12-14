@@ -46,6 +46,8 @@ class SignalRService {
                     .configureLogging(signalR.LogLevel.Information)
                     .build();
 
+                this.attachStoredListeners();
+
                 // Setup reconnection handlers
                 this.connection.onreconnecting((error) => {
                     console.log('SignalR reconnecting:', error);
@@ -79,6 +81,20 @@ class SignalRService {
 
         return this.connectionPromise;
     }
+
+
+
+    attachStoredListeners() {
+        if (!this.connection) return;
+
+        for (const [eventName, callbacks] of this.listeners.entries()) {
+            this.connection.off(eventName);
+            for (const cb of callbacks) {
+                this.connection.on(eventName, cb);
+            }
+        }
+    }
+
 
     async stopConnection() {
         if (this.connection) {
@@ -161,6 +177,11 @@ class SignalRService {
     }
 
 
+    onGameReset(callback) {
+        this.registerListener('GameReset', callback);
+    }
+
+
     // Voting-related listeners
     onCategoryVotingStarted(callback) {
         this.registerListener('CategoryVotingStarted', callback);
@@ -183,40 +204,68 @@ class SignalRService {
         this.registerListener('CategoryVotingTimer', callback);
     }
 
-    // Generic listener registration
-    registerListener(eventName, callback) {
-        if (!this.connection) {
-            console.error('Cannot register listener - connection not initialized');
-            return;
-        }
+    onGameStateSync(handler) {
+        this.registerListener("GameStateSync", handler);
+    }
 
-        // Store the callback
+    offGameStateSync(handler) {
+        this.removeListener("GameStateSync", handler);
+    }
+    // Generic listener registration
+
+
+    registerListener(eventName, callback) {
         if (!this.listeners.has(eventName)) {
             this.listeners.set(eventName, []);
         }
-        this.listeners.get(eventName).push(callback);
 
-        // Register with SignalR
-        this.connection.on(eventName, callback);
-        console.log(`Registered listener for: ${eventName}`);
+        const arr = this.listeners.get(eventName);
+        if (!arr.includes(callback)) {
+            arr.push(callback);
+        }
+
+        if (this.connection) {
+            this.connection.on(eventName, callback);
+            console.log(`Registered listener for: ${eventName}`);
+        } else {
+            console.log(`Stored listener for later (no connection yet): ${eventName}`);
+        }
     }
 
+
+
     // Remove a specific listener
+
     removeListener(eventName, callback) {
         if (!this.connection) {
+            // Still clear stored listeners even if not connected
+            if (!callback) {
+                this.listeners.delete(eventName);
+            } else if (this.listeners.has(eventName)) {
+                const arr = this.listeners.get(eventName);
+                const idx = arr.indexOf(callback);
+                if (idx > -1) arr.splice(idx, 1);
+                if (arr.length === 0) this.listeners.delete(eventName);
+            }
             return;
         }
 
         try {
+            if (!callback) {
+                // remove ALL handlers for this event
+                this.connection.off(eventName);
+                this.listeners.delete(eventName);
+                console.log(`Removed ALL listeners for: ${eventName}`);
+                return;
+            }
+
             this.connection.off(eventName, callback);
 
-            // Remove from our tracking
             if (this.listeners.has(eventName)) {
-                const callbacks = this.listeners.get(eventName);
-                const index = callbacks.indexOf(callback);
-                if (index > -1) {
-                    callbacks.splice(index, 1);
-                }
+                const arr = this.listeners.get(eventName);
+                const idx = arr.indexOf(callback);
+                if (idx > -1) arr.splice(idx, 1);
+                if (arr.length === 0) this.listeners.delete(eventName);
             }
 
             console.log(`Removed listener for: ${eventName}`);
@@ -224,6 +273,7 @@ class SignalRService {
             console.error(`Error removing listener for ${eventName}:`, error);
         }
     }
+
 
     // Remove all listeners for an event
     removeAllListeners(eventName) {
@@ -363,6 +413,8 @@ class SignalRService {
             throw error;
         }
     }
+
+
 }
 
 const signalRService = new SignalRService();

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import './App.css';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -14,6 +14,7 @@ import GameResults from './components/GameResults';
 import Profile from './components/Profile';
 import MultiplayerGameRoom from './components/MultiplayerGameRoom';
 import MultiplayerGame from './components/MultiplayerGame';
+import signalRService from './services/signalRService';
 
 function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -88,6 +89,51 @@ function App() {
             window.fetch = originalFetch;
         };
     }, [API_BASE]);
+
+
+    useEffect(() => {
+        const handleGameReset = (details) => {
+            console.log('App.js: GameReset event received:', details);
+
+            const resetRoomId = details?.roomId ?? details?.RoomId ?? roomCode;
+            const hostId = details?.hostPlayerId ?? details?.HostPlayerId;
+
+            console.log('App.js: Processing reset for room:', resetRoomId);
+            console.log('App.js: Current view:', currentView);
+
+            // Reset multiplayer game state
+            setMultiplayerGame(null);
+
+            if (resetRoomId) {
+                const myPlayerId = Number(localStorage.getItem('playerId'));
+                const amHost = hostId != null && Number(hostId) === myPlayerId;
+
+                console.log('App.js: Navigating to game room. Am I host?', amHost);
+
+                // Update room info
+                setRoomCode(resetRoomId);
+                setCurrentGameRoom({
+                    roomCode: resetRoomId,
+                    isHost: amHost
+                });
+
+                // Force navigation to game room
+                console.log('App.js: Changing view to multiplayer-game-room');
+                setCurrentView('multiplayer-game-room');
+            } else {
+                console.log('App.js: No room ID, going to multiplayer-lobby');
+                setCurrentView('multiplayer-lobby');
+                setRoomCode(null);
+                setCurrentGameRoom(null);
+            }
+        };
+
+        signalRService.onGameReset(handleGameReset);
+
+        return () => {
+            signalRService.removeListener('GameReset');
+        };
+    }, [roomCode, currentView]); // Added currentView to dependencies
 
     // Authentication handlers
     const handleLogin = (userData) => {
@@ -195,12 +241,12 @@ function App() {
     };
 
 
-    const handleStartMultiplayerGame = (category, roomCode) => {
+    const handleStartMultiplayerGame = useCallback((category, roomCode) => {
         console.log('Starting multiplayer game:', { category, roomCode });
         setSelectedCategory(category);
         setMultiplayerGame({ roomCode, category });
         setCurrentView('multiplayer-game');
-    };
+    }, []);
 
     const handleMultiplayerGameFinished = (results) => {
         console.log('Multiplayer game finished:', results);
@@ -509,7 +555,7 @@ function App() {
         );
     }
 
-    if (currentView === 'multiplayer-game') {
+    if (currentView === 'multiplayer-game' && multiplayerGame) {
         return (
             <div className="App">
                 <MultiplayerGame
