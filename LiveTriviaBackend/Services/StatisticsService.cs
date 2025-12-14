@@ -41,23 +41,22 @@ namespace live_trivia.Services
 
         public async Task UpdateGameStatisticsAsync(int playerId, string category, int score, int correctAnswers, int totalQuestions)
         {
-            Console.WriteLine($"=== UPDATE STATS CALLED ===");
-            Console.WriteLine($"PlayerId: {playerId}, Category: {category}, Score: {score}, Correct: {correctAnswers}, Total: {totalQuestions}");
-
             var stats = await _context.PlayerStatistics
                 .Include(ps => ps.CategoryStatistics)
                 .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
 
             if (stats == null)
             {
-                Console.WriteLine("No stats found, initializing...");
                 await InitializePlayerStatisticsAsync(playerId);
                 stats = await _context.PlayerStatistics
                     .Include(ps => ps.CategoryStatistics)
                     .FirstOrDefaultAsync(ps => ps.PlayerId == playerId);
             }
 
-            Console.WriteLine($"Before update - Games: {stats.TotalGamesPlayed}, Score: {stats.TotalScore}");
+            if (stats == null)
+            {
+                throw new InvalidOperationException($"Failed to initialize statistics for player {playerId}");
+            }
 
             // Update overall statistics
             stats.TotalGamesPlayed++;
@@ -71,16 +70,13 @@ namespace live_trivia.Services
             stats.LastPlayedAt = DateTime.UtcNow;
             stats.UpdatedAt = DateTime.UtcNow;
 
-            Console.WriteLine($"After update - Games: {stats.TotalGamesPlayed}, Score: {stats.TotalScore}");
-
             // Update category-specific statistics
-            await UpdateCategoryStatisticsAsync(stats, category, correctAnswers, totalQuestions);
+            UpdateCategoryStatistics(stats, category, correctAnswers, totalQuestions);
 
             await _context.SaveChangesAsync();
-            Console.WriteLine("Statistics saved successfully!");
         }
 
-        private async Task UpdateCategoryStatisticsAsync(PlayerStatistics stats, string category, int correctAnswers, int totalQuestions)
+        private void UpdateCategoryStatistics(PlayerStatistics stats, string category, int correctAnswers, int totalQuestions)
         {
             var categoryStat = stats.CategoryStatistics
                 .FirstOrDefault(cs => cs.Category == category);

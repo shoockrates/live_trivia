@@ -13,4 +13,5 @@ public interface IGameService
     Task SaveChangesAsync();
     Task CleanupGameAsync(string roomId);
     Task RecordCategoryVoteAsync(string roomId, int playerId, string category);
+    Task<GameDetailsDto> ResetGameAsync(string roomId, int requestingPlayerId);
 }

@@ -24,16 +24,22 @@ namespace live_trivia.Controllers
             _activeGamesService = activeGamesService;
         }
 
+
         [HttpGet("{roomId}")]
         [Authorize]
         public async Task<IActionResult> GetGame(string roomId)
         {
-            var details = await _gameService.GetGameDetailsAsync(roomId);
-            if (details == null)
+            try
+            {
+                var details = await _gameService.GetGameDetailsAsync(roomId);
+                return Ok(details);
+            }
+            catch (GameNotFoundException)
+            {
                 return NotFound("Game not found");
-
-            return Ok(details);
+            }
         }
+
 
         [HttpPost("{roomId}")]
         [Authorize]
@@ -119,9 +125,6 @@ namespace live_trivia.Controllers
                     FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
                 });
 
-                await Task.Delay(5000);
-                await _gameService.CleanupGameAsync(roomId);
-
                 return Ok(new { message = "Game finished.", state = game.State.ToString() });
             }
 
@@ -181,6 +184,8 @@ namespace live_trivia.Controllers
                 return Unauthorized("Player identity not found in token.");
             }
 
+            var playerName = User.Identity?.Name ?? "Unknown";
+
             var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
                 return NotFound("Game not found");
@@ -193,21 +198,44 @@ namespace live_trivia.Controllers
             if (question == null)
                 return NotFound("Question not found in this game");
 
-            var playerAnswer = new PlayerAnswer
-            {
-                PlayerId = player.Id,
-                QuestionId = question.Id,
-                GameRoomId = roomId,
-                SelectedAnswerIndexes = request.SelectedAnswerIndexes,
-                AnsweredAt = DateTime.UtcNow,
-                TimeLeft = request.TimeLeft
-            };
+            // Check if answer already exists (upsert logic)
+            var existingAnswer = game.PlayerAnswers.FirstOrDefault(pa =>
+                pa.GameRoomId == roomId &&
+                pa.PlayerId == playerId &&
+                pa.QuestionId == request.QuestionId);
 
-            game.PlayerAnswers.Add(playerAnswer);
+            if (existingAnswer == null)
+            {
+                var playerAnswer = new PlayerAnswer
+                {
+                    PlayerId = player.Id,
+                    QuestionId = question.Id,
+                    GameRoomId = roomId,
+                    SelectedAnswerIndexes = request.SelectedAnswerIndexes,
+                    AnsweredAt = DateTime.UtcNow,
+                    TimeLeft = request.TimeLeft
+                };
+
+                game.PlayerAnswers.Add(playerAnswer);
+            }
+            else
+            {
+                existingAnswer.SelectedAnswerIndexes = request.SelectedAnswerIndexes;
+                existingAnswer.TimeLeft = request.TimeLeft;
+                existingAnswer.AnsweredAt = DateTime.UtcNow;
+            }
 
             await _gameService.SaveChangesAsync();
 
-            return Ok(playerAnswer);
+            await _hubContext.Clients.Group(roomId).SendAsync("AnswerSubmitted", new
+            {
+                PlayerId = playerId,
+                PlayerName = playerName,
+                QuestionId = request.QuestionId,
+                Timestamp = DateTime.UtcNow
+            });
+
+            return Ok(new { message = "Answer submitted successfully" });
         }
 
         [HttpGet("{roomId}/settings")]
@@ -276,8 +304,31 @@ namespace live_trivia.Controllers
             return Ok(new { message = "Game deleted successfully." });
         }
 
-        // REMOVED: [HttpPost("{roomId}/vote")] endpoint
-        // Category voting is now handled exclusively through SignalR (GameHub)
-        // This prevents duplicate functionality and ensures real-time synchronization
+
+        [HttpPost("{roomId}/reset")]
+        [Authorize]
+        public async Task<IActionResult> ResetGame(string roomId)
+        {
+            var playerIdClaim = User.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out var playerId))
+                return Unauthorized("Authenticated player identity not found.");
+
+            try
+            {
+                var details = await _gameService.ResetGameAsync(roomId, playerId);
+
+                await Task.Delay(2000);
+
+                await _hubContext.Clients.Group(roomId).SendAsync("GameReset", details);
+
+                return Ok(details);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Reset] ERROR resetting game {roomId}: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
     }
 }

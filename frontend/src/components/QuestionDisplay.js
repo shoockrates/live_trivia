@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './QuestionDisplay.css';
 
 const QuestionDisplay = ({
@@ -7,6 +7,7 @@ const QuestionDisplay = ({
     correctIndexes = [],
     onAnswerSelect,
     onNext,
+    onTimerExpire,
     currentIndex = 0,
     totalQuestions = 5,
     correctCount = 0,
@@ -25,22 +26,54 @@ const QuestionDisplay = ({
     const [selectedAnswers, setSelectedAnswers] = useState([]);
     const [isAnswered, setIsAnswered] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
+    const timerExpiredRef = useRef(false); // Track if timer already expired
 
     const isMultiChoice = correctIndexes.length > 1;
 
+    // Reset state when question changes
     useEffect(() => {
         setSelectedAnswers([]);
         setIsAnswered(false);
         setTimeLeft(30);
+        timerExpiredRef.current = false; // Reset timer flag
     }, [currentIndex]);
 
+    // FIXED: Timer logic - prevent double triggering
     useEffect(() => {
-        if (!isAnswered && timeLeft > 0) {
-            const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-            return () => clearTimeout(timer);
-        }
-        if (timeLeft === 0 && !isAnswered) handleSubmit();
-    }, [timeLeft, isAnswered]);
+        if (isAnswered || timeLeft <= 0 || timerExpiredRef.current) return;
+
+        const timer = setTimeout(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    // Mark that timer has expired to prevent double triggering
+                    if (!timerExpiredRef.current) {
+                        timerExpiredRef.current = true;
+
+                        console.log('Timer expired. IsMultiplayer:', isMultiplayer, 'IsHost:', isHost);
+
+                        if (isMultiplayer) {
+                            // In multiplayer, only host calls the expire callback
+                            if (isHost && onTimerExpire) {
+                                console.log('Host calling onTimerExpire');
+                                onTimerExpire();
+                            } else {
+                                console.log('Non-host waiting for host to advance');
+                            }
+                        } else {
+                            // Single player - auto submit
+                            if (!isAnswered) {
+                                handleSubmit();
+                            }
+                        }
+                    }
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [timeLeft, isAnswered, isMultiplayer, isHost, onTimerExpire]);
 
     const handleAnswerClick = (idx) => {
         if (isAnswered) return;
@@ -56,19 +89,24 @@ const QuestionDisplay = ({
         }
     };
 
-
     const handleSubmit = () => {
-        if (isAnswered || selectedAnswers.length === 0) return;
+        // Prevent double submission
+        if (isAnswered) {
+            console.log('Already answered, skipping submit');
+            return;
+        }
 
+        console.log('handleSubmit called. Selected answers:', selectedAnswers);
         setIsAnswered(true);
 
-        const finalAnswer = [...selectedAnswers].sort((a, b) => a - b);
+        const finalAnswer = selectedAnswers.length > 0
+            ? [...selectedAnswers].sort((a, b) => a - b)
+            : []; // Empty array = wrong answer
 
         onAnswerSelect(finalAnswer, timeLeft);
     };
 
-
-    // Auto-advance only in multiplayer or if not skipped
+    // Auto-advance only in single player mode
     useEffect(() => {
         if (!isMultiplayer && isAnswered) {
             const timer = setTimeout(() => {
@@ -104,7 +142,7 @@ const QuestionDisplay = ({
                             </div>
                             {isHost && (
                                 <div className="host-indicator">
-                                    🎮 You are the host
+                                    Host
                                 </div>
                             )}
                         </div>
@@ -151,7 +189,7 @@ const QuestionDisplay = ({
                     })}
                 </div>
 
-                {/* FOOTER — FINAL & PERFECT */}
+                {/* FOOTER */}
                 <div className="question-footer">
                     <div className="stats-section">
                         <div className="stat-item correct">
@@ -191,17 +229,10 @@ const QuestionDisplay = ({
                             )}
 
                             {/* Next Question Button */}
-                            {isMultiplayer && isHost && isAnswered && answeredPlayers >= totalPlayers && (
+                            {isAnswered && (
                                 <button className="next-button host-next-button" onClick={onNext}>
                                     {isLastQuestion ? 'Finish Quiz' : `Next Question (${answeredPlayers}/${totalPlayers})`}
                                 </button>
-                            )}
-
-                            {/* Waiting for other players */}
-                            {isAnswered && answeredPlayers < totalPlayers && (
-                                <div style={{ color: '#88e0ff', fontSize: '16px', fontWeight: '600' }}>
-                                    Waiting for players... ({answeredPlayers}/{totalPlayers})
-                                </div>
                             )}
                         </>
                     )}

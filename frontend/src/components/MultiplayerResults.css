@@ -228,6 +228,7 @@
 .action-button {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 16px 24px;
     border-radius: 12px;
@@ -237,7 +238,10 @@
     transition: all 0.3s ease;
     border: none;
     min-width: 160px;
-    justify-content: center;
+    min-height: 56px;
+    /* Fixed height to prevent resizing */
+    position: relative;
+    /* For spinner positioning */
 }
 
 .action-button.primary {
@@ -246,9 +250,15 @@
     box-shadow: 0 4px 16px rgba(110, 123, 255, 0.3);
 }
 
-.action-button.primary:hover {
+.action-button.primary:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(110, 123, 255, 0.4);
+}
+
+.action-button.primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .action-button.secondary {
@@ -262,6 +272,33 @@
     border-color: rgba(156, 200, 255, 0.4);
     color: #eaf2f8;
     transform: translateY(-1px);
+}
+
+.action-button.waiting-host {
+    background: rgba(20, 28, 36, 0.4);
+    border: 1px solid rgba(156, 200, 255, 0.15);
+    color: #c9d7e6;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 24px;
+    min-height: 56px;
+    /* Match primary button height */
+}
+
+.waiting-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(156, 200, 255, 0.2);
+    border-top-color: #9cc8ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+    /* Prevent spinner from shrinking */
+    margin: 0;
+    /* Remove any default margin */
 }
 
 @keyframes fadeIn {
@@ -379,5 +416,11 @@
 
     .final-score {
         font-size: 16px;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }

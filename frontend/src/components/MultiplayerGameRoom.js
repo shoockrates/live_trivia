@@ -15,44 +15,70 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
     const [error, setError] = useState('');
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
-
     const [isCategoryLocked, setIsCategoryLocked] = useState(false);
     const [isVoting, setIsVoting] = useState(false);
     const [votingCategories, setVotingCategories] = useState([]);
     const [voteTallies, setVoteTallies] = useState({});
     const [myVote, setMyVote] = useState(null);
-
     const [remainingSeconds, setRemainingSeconds] = useState(null);
 
     const listenersRegistered = useRef(false);
     const mounted = useRef(true);
-    const connectionInitialized = useRef(false);
+    const initializationDone = useRef(false);
 
     useEffect(() => {
         mounted.current = true;
-
         return () => {
             mounted.current = false;
-            connectionInitialized.current = false;
         };
     }, []);
 
+    // Stable load function using useRef to avoid stale closures
+    const loadGameStateRef = useRef();
+    loadGameStateRef.current = async () => {
+        try {
+            console.log('Loading game state for room:', roomCode);
+            const response = await fetch(`${API_BASE}/games/${roomCode}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const gameDetails = await response.json();
+                console.log('Game state loaded:', gameDetails);
+                console.log('Players in response:', gameDetails.players?.length || 0);
+
+                if (mounted.current) {
+                    const hostId = gameDetails.hostPlayerId ?? gameDetails.HostPlayerId;
+                    setIsHost(Number(hostId) === Number(user.playerId));
+
+                    // Force update players state
+                    const playersList = gameDetails.players || [];
+                    console.log('Setting players state to:', playersList);
+                    setPlayers(playersList);
+
+                    const normalizedState = gameDetails.state?.toLowerCase() || 'waiting';
+                    setGameState(normalizedState);
+
+                    if (gameDetails.settings && !selectedCategory) {
+                        setSelectedCategory(gameDetails.settings.category);
+                    }
+                }
+            } else {
+                console.error('Failed to load game state:', response.status);
+            }
+        } catch (error) {
+            console.error('Failed to load game details:', error);
+        }
+    };
+
     useEffect(() => {
-        if (connectionInitialized.current) {
+        // Prevent multiple initializations
+        if (initializationDone.current) {
             return;
         }
-        connectionInitialized.current = true;
-
-        let playerJoinedHandler;
-        let playerLeftHandler;
-        let gameStartedHandler;
-        let gameStartFailedHandler;
-
-        let revoteStartedHandler;
-        let votingTimerHandler;
-        let votingStartedHandler;
-        let voteUpdatedHandler;
-        let votingFinishedHandler;
+        initializationDone.current = true;
 
         const initializeConnection = async () => {
             try {
@@ -64,243 +90,201 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
                 setConnectionStatus('connecting');
 
-                await signalRService.startConnection(token);
+                // Ensure connection is established
+                if (!signalRService.isConnected) {
+                    console.log('Establishing SignalR connection...');
+                    await signalRService.startConnection(token);
+                    console.log('SignalR connection established');
+                } else {
+                    console.log('SignalR already connected');
+                }
+
                 setConnectionStatus('connected');
 
-                playerJoinedHandler = (data) => {
-                    console.log('Player joined event received - FULL DATA:', data);
-                    if (!mounted.current) return;
+                // Make sure connection object is available
+                if (!signalRService.connection) {
+                    throw new Error('SignalR connection object not available');
+                }
 
-                    // Force update the game state from the server
-                    loadGameState().catch(error => {
-                        console.error('Failed to reload game state after player joined:', error);
+                console.log('SignalR connection state:', signalRService.connection.state);
+
+                // Register event handlers BEFORE joining the room
+                if (!listenersRegistered.current) {
+                    console.log('Registering SignalR event handlers...');
+
+                    // Player joined handler - use camelCase (SignalR converts PascalCase to camelCase)
+                    signalRService.connection.on('PlayerJoined', async (data) => {
+                        console.log('playerJoined event received:', data);
+                        if (!mounted.current) return;
+                        await loadGameStateRef.current();
                     });
-                };
 
-                playerLeftHandler = (data) => {
-                    console.log('Player left event received:', data);
-                    if (!mounted.current) return;
-
-                    // Force update the game state from the server
-                    loadGameState().catch(error => {
-                        console.error('Failed to reload game state after player left:', error);
+                    // Player left handler - use camelCase
+                    signalRService.connection.on('PlayerLeft', async (data) => {
+                        console.log('playerLeft event received:', data);
+                        if (!mounted.current) return;
+                        await loadGameStateRef.current();
                     });
-                };
 
-                gameStartedHandler = (gameDetails) => {
-                    if (!mounted.current) return;
+                    // Game started handler - use camelCase
+                    signalRService.connection.on('GameStarted', (gameDetails) => {
+                        if (!mounted.current) return;
+                        console.log('gameStarted event received');
 
-                    setGameState('in-progress');
-                    onStartGame(selectedCategory, roomCode);
-                };
+                        setGameState('in-progress');
+                        setLoading(false);
 
-                gameStartFailedHandler = (errorMessage) => {
-                    if (!mounted.current) return;
+                        let category = selectedCategory;
 
-                    setError(`Failed to start game: ${errorMessage}`);
-                    setLoading(false);
-                };
+                        if (gameDetails?.settings?.category) {
+                            category = gameDetails.settings.category;
+                        } else if (gameDetails?.questions?.[0]?.category) {
+                            category = gameDetails.questions[0].category;
+                        }
 
-                signalRService.removeAllListeners('PlayerJoined');
-                signalRService.removeAllListeners('PlayerLeft');
-                signalRService.removeAllListeners('GameStarted');
-                signalRService.removeAllListeners('GameStartFailed');
+                        onStartGame(category, roomCode);
+                    });
 
-                signalRService.onPlayerJoined(playerJoinedHandler);
-                signalRService.onPlayerLeft(playerLeftHandler);
-                signalRService.onGameStarted(gameStartedHandler);
-                signalRService.onGameStartFailed(gameStartFailedHandler);
-                signalRService.onCategoryRevoteStarted(revoteStartedHandler);
-                signalRService.onCategoryVotingTimer(votingTimerHandler);
+                    // Game start failed handler - use camelCase
+                    signalRService.connection.on('GameStartFailed', (errorMessage) => {
+                        if (!mounted.current) return;
+                        console.error('gameStartFailed:', errorMessage);
+                        setError(`Failed to start game: ${errorMessage}`);
+                        setLoading(false);
+                    });
 
+                    // Voting handlers - use camelCase
+                    signalRService.connection.on('CategoryVotingTimer', (data) => {
+                        if (!mounted.current) return;
+                        const remaining = data.remainingSeconds ?? data.RemainingSeconds ?? null;
+                        setRemainingSeconds(remaining);
+                    });
 
-                votingTimerHandler = (data) => {
-                    if (!mounted.current) return;
-                    const remaining = data.remainingSeconds ?? data.RemainingSeconds ?? null;
-                    setRemainingSeconds(remaining);
-                };
+                    signalRService.connection.on('CategoryRevoteStarted', (data) => {
+                        console.log('categoryRevoteStarted', data);
+                        if (!mounted.current) return;
+                        setIsVoting(true);
+                        setVotingCategories(data.categories || data.Categories || []);
+                        setVoteTallies({});
+                        setMyVote(null);
+                        setRemainingSeconds(data.durationSeconds ?? data.DurationSeconds ?? null);
+                        setIsCategoryLocked(false);
+                    });
 
-                revoteStartedHandler = (data) => {
-                    console.log('CategoryRevoteStarted', data);
-                    if (!mounted.current) return;
+                    signalRService.connection.on('CategoryVotingStarted', (data) => {
+                        console.log('categoryVotingStarted', data);
+                        if (!mounted.current) return;
+                        setIsVoting(true);
+                        setVotingCategories(data.categories || data.Categories || []);
+                        setVoteTallies({});
+                        setMyVote(null);
+                        setIsCategoryLocked(false);
+                        const initial = data.durationSeconds ?? data.DurationSeconds ?? null;
+                        setRemainingSeconds(initial);
+                    });
 
-                    setIsVoting(true);
-                    setVotingCategories(data.categories || data.Categories || []);
-                    setVoteTallies({});
-                    setMyVote(null);
-                    setRemainingSeconds(data.durationSeconds ?? data.DurationSeconds ?? null);
-                    setIsCategoryLocked(false);
-                };
+                    signalRService.connection.on('CategoryVoteUpdated', (data) => {
+                        console.log('categoryVoteUpdated', data);
+                        if (!mounted.current) return;
+                        const tallies = data.tallies || data.Tallies || {};
+                        setVoteTallies(tallies);
+                        const eventPlayerId = data.playerId ?? data.PlayerId;
+                        const selectedCategory = data.selectedCategory ?? data.SelectedCategory;
+                        if (parseInt(eventPlayerId) === parseInt(user.playerId)) {
+                            setMyVote(selectedCategory);
+                        }
+                    });
 
+                    signalRService.connection.on('CategoryVotingFinished', (data) => {
+                        console.log('categoryVotingFinished', data);
+                        if (!mounted.current) return;
+                        const winning = data.winningCategory || data.WinningCategory || null;
+                        const isFinal = data.isFinal ?? data.IsFinal ?? false;
+                        setIsVoting(false);
+                        setVotingCategories([]);
+                        setVoteTallies({});
+                        setMyVote(null);
+                        setRemainingSeconds(null);
+                        if (winning) {
+                            setSelectedCategory(winning);
+                        }
+                        if (isFinal && winning) {
+                            setIsCategoryLocked(true);
+                        }
+                    });
 
+                    // Game state sync handler - use camelCase
+                    signalRService.connection.on('GameStateSync', (gameDetails) => {
+                        if (!mounted.current) return;
+                        console.log('gameStateSync received:', gameDetails);
 
-                votingStartedHandler = (data) => {
-                    console.log('CategoryVotingStarted', data);
-                    if (!mounted.current) return;
+                        const hostId = gameDetails.hostPlayerId ?? gameDetails.HostPlayerId;
+                        setIsHost(Number(hostId) === Number(user.playerId));
 
-                    setIsVoting(true);
-                    setVotingCategories(data.categories || data.Categories || []);
-                    setVoteTallies({});
-                    setMyVote(null);
-                    setIsCategoryLocked(false);
+                        const playersList = gameDetails.players || [];
+                        console.log('gameStateSync: Setting players to:', playersList);
+                        setPlayers(playersList);
+                        setGameState(gameDetails.state?.toLowerCase() || 'waiting');
+                    });
 
+                    listenersRegistered.current = true;
+                    console.log('All SignalR event handlers registered');
 
-                    const initial = data.durationSeconds ?? data.DurationSeconds ?? null;
-                    setRemainingSeconds(initial);
-                };
+                    // Verify handlers were registered
+                    console.log('Verifying handlers registered on connection...');
+                }
 
+                // Small delay to ensure handlers are ready
+                await new Promise(resolve => setTimeout(resolve, 100));
 
+                // NOW join the room - this ensures we receive all events
+                console.log('Joining SignalR room:', roomCode);
+                await signalRService.joinGameRoom(roomCode);
+                console.log('Successfully joined SignalR room');
 
-
-                voteUpdatedHandler = (data) => {
-                    console.log('CategoryVoteUpdated', data);
-                    if (!mounted.current) return;
-
-                    const tallies = data.tallies || data.Tallies || {};
-                    setVoteTallies(tallies);
-
-                    const eventPlayerId = data.playerId ?? data.PlayerId;
-                    const selectedCategory = data.selectedCategory ?? data.SelectedCategory;
-
-                    if (parseInt(eventPlayerId) === parseInt(user.playerId)) {
-                        setMyVote(selectedCategory);
-                    }
-                };
-
-
-
-                votingFinishedHandler = (data) => {
-                    console.log('CategoryVotingFinished', data);
-                    if (!mounted.current) return;
-
-                    const winning = data.winningCategory || data.WinningCategory || null;
-                    const isFinal = data.isFinal ?? data.IsFinal ?? false;
-
-                    setIsVoting(false);
-                    setVotingCategories([]);
-                    setVoteTallies({});
-                    setMyVote(null);
-                    setRemainingSeconds(null);
-
-                    if (winning) {
-                        setSelectedCategory(winning);
-                    }
-
-                    if (isFinal && winning) {
-                        setIsCategoryLocked(true);
-                    }
-                };
-
-
-                signalRService.onCategoryVotingTimer(votingTimerHandler);
-                signalRService.onCategoryVotingStarted(votingStartedHandler);
-                signalRService.onCategoryVoteUpdated(voteUpdatedHandler);
-                signalRService.onCategoryVotingFinished(votingFinishedHandler);
-
-
-                listenersRegistered.current = true;
-
+                // Wait a bit for GameStateSync event
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                await signalRService.joinGameRoom(roomCode);
-                await loadGameState();
+                // Load initial game state as fallback
+                console.log('Loading initial game state...');
+                await loadGameStateRef.current();
 
             } catch (error) {
                 console.error('Failed to initialize SignalR connection:', error);
                 setConnectionStatus('error');
                 setError('Failed to connect to game room. Please try again.');
-                await loadGameState();
-            }
-        };
-
-        const loadGameState = async () => {
-            try {
-                const response = await fetch(`${API_BASE}/games/${roomCode}`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                if (response.ok) {
-                    const gameDetails = await response.json();
-
-                    if (mounted.current) {
-                        setIsHost(gameDetails.hostPlayerId === parseInt(user.playerId));
-                        setPlayers(gameDetails.players || []);
-
-                        const normalizedState = gameDetails.state?.toLowerCase() || 'waiting';
-                        setGameState(normalizedState);
-
-                        if (gameDetails.settings) {
-                            setSelectedCategory(gameDetails.settings.category);
-                        } else {
-                            await loadGameSettings();
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load game details:', error);
-            }
-        };
-
-        const loadGameSettings = async () => {
-            try {
-                const response = await fetch(`${API_BASE}/games/${roomCode}/settings`, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-
-                if (response.ok) {
-                    const settings = await response.json();
-                    if (mounted.current && settings.category) {
-                        setSelectedCategory(settings.category);
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load game settings:', error);
+                // Still try to load game state even if SignalR fails
+                await loadGameStateRef.current();
             }
         };
 
         initializeConnection();
 
-
         return () => {
-            if (listenersRegistered.current) {
-                if (playerJoinedHandler) {
-                    signalRService.removeListener('PlayerJoined', playerJoinedHandler);
-                }
-                if (playerLeftHandler) {
-                    signalRService.removeListener('PlayerLeft', playerLeftHandler);
-                }
-                if (gameStartedHandler) {
-                    signalRService.removeListener('GameStarted', gameStartedHandler);
-                }
-                if (gameStartFailedHandler) {
-                    signalRService.removeListener('GameStartFailed', gameStartFailedHandler);
-                }
-                if (votingStartedHandler) {
-                    signalRService.removeListener('CategoryVotingStarted', votingStartedHandler);
-                }
-                if (voteUpdatedHandler) {
-                    signalRService.removeListener('CategoryVoteUpdated', voteUpdatedHandler);
-                }
-                if (votingFinishedHandler) {
-                    signalRService.removeListener('CategoryVotingFinished', votingFinishedHandler);
-                }
-                if (revoteStartedHandler) {
-                    signalRService.removeListener('CategoryRevoteStarted', revoteStartedHandler);
-                }
-                if (votingTimerHandler) {
-                    signalRService.removeListener('CategoryVotingTimer', votingTimerHandler);
-                }
+            // Mark as unmounted
+            mounted.current = false;
 
+            // Clean up listeners on unmount
+            if (listenersRegistered.current && signalRService.connection) {
+                console.log('Cleaning up SignalR listeners');
+                signalRService.connection.off('GameStateSync');
+                signalRService.connection.off('PlayerJoined');
+                signalRService.connection.off('PlayerLeft');
+                signalRService.connection.off('GameStarted');
+                signalRService.connection.off('GameStartFailed');
+                signalRService.connection.off('CategoryVotingStarted');
+                signalRService.connection.off('CategoryVoteUpdated');
+                signalRService.connection.off('CategoryVotingFinished');
+                signalRService.connection.off('CategoryRevoteStarted');
+                signalRService.connection.off('CategoryVotingTimer');
 
+                signalRService.leaveGameRoom(roomCode).catch(() => { });
                 listenersRegistered.current = false;
             }
-            connectionInitialized.current = false;
-        };
 
+            // Reset initialization flag so it can run again if component remounts
+            initializationDone.current = false;
+        };
     }, [roomCode, user.playerId, onStartGame]);
 
     useEffect(() => {
@@ -315,19 +299,13 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
                 if (response.ok) {
                     const questions = await response.json();
-
                     const uniqueCategories = Array.from(
                         new Set(questions.map(q => q.category || q.Category || '').filter(Boolean))
                     ).sort();
 
                     if (mounted.current) {
                         setCategories(uniqueCategories);
-                        if (!selectedCategory && uniqueCategories.length > 0 && isHost) {
-                            setSelectedCategory(uniqueCategories[0]);
-                        }
                     }
-                } else {
-                    setError('Failed to load categories');
                 }
             } catch (error) {
                 setError('Failed to load categories');
@@ -336,14 +314,10 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
             }
         };
 
-        loadCategories();
-    }, [isHost]);
-
-    useEffect(() => {
-        if (isHost && categories.length > 0 && !selectedCategory) {
-            setSelectedCategory(categories[0]);
+        if (categories.length === 0) {
+            loadCategories();
         }
-    }, [isHost, categories, selectedCategory]);
+    }, []);
 
     const handleStartGame = async () => {
         if (!selectedCategory) {
@@ -360,53 +334,8 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         setError('');
 
         try {
-            console.log('Selected category:', selectedCategory);
-            console.log('Available categories:', categories);
-            // First, let's check ALL questions to see what categories exist
-            const allQuestionsResponse = await fetch(`${API_BASE}/questions`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            console.log('Starting game with category:', selectedCategory);
 
-            if (allQuestionsResponse.ok) {
-                const allQuestions = await allQuestionsResponse.json();
-                console.log('ALL QUESTIONS:', allQuestions);
-
-                // Count questions by category
-                const categoryCounts = {};
-                allQuestions.forEach(q => {
-                    const category = q.category || q.Category;
-                    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-                });
-                console.log('QUESTIONS BY CATEGORY:', categoryCounts);
-            }
-
-            // Now check questions for the selected category
-            const questionsResponse = await fetch(`${API_BASE}/questions/category/${encodeURIComponent(selectedCategory)}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            if (!questionsResponse.ok) {
-                throw new Error(`Failed to load questions for category: ${selectedCategory}`);
-            }
-
-            const questions = await questionsResponse.json();
-            console.log(`Found ${questions.length} questions for category: "${selectedCategory}"`);
-            console.log('QUESTIONS FOUND:', questions);
-
-            if (questions.length === 0) {
-                throw new Error(`No questions available for category: ${selectedCategory}. Please select a different category.`);
-            }
-
-            // Use the available number of questions
-            const questionCount = Math.min(5, questions.length);
-
-            console.log(`Will request ${questionCount} questions (${questions.length} available)`);
-
-            // Update game settings
             const settingsResponse = await fetch(`${API_BASE}/games/${roomCode}/settings`, {
                 method: 'POST',
                 headers: {
@@ -415,7 +344,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 },
                 body: JSON.stringify({
                     category: selectedCategory,
-                    questionCount: questionCount,
+                    questionCount: 5,
                     timeLimitSeconds: 30,
                     difficulty: "any"
                 })
@@ -426,28 +355,8 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 throw new Error(`Failed to update game settings: ${errorText}`);
             }
 
-            console.log(`Game settings updated with ${questionCount} questions`);
-
-            // Wait for settings to persist
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            const verifySettingsResponse = await fetch(`${API_BASE}/games/${roomCode}/settings`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-
-            if (verifySettingsResponse.ok) {
-                const currentSettings = await verifySettingsResponse.json();
-                console.log('CURRENT SETTINGS AFTER UPDATE:', currentSettings);
-
-                // Check if the category and difficulty are what we expect
-                if (currentSettings.category.toLowerCase() !== selectedCategory.toLowerCase() || currentSettings.difficulty !== "any") {
-                    throw new Error(`Settings not updated correctly. Expected: ${selectedCategory}, any. Got: ${currentSettings.category}, ${currentSettings.difficulty}`);
-                }
-            }
-
-            // Start the game
             const startResponse = await fetch(`${API_BASE}/games/${roomCode}/start`, {
                 method: 'POST',
                 headers: {
@@ -469,17 +378,13 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         }
     };
 
-
     const handleStartVoting = async () => {
         try {
-            // Use all existing categories as voting options
             const options = categories.length > 0 ? categories : [];
-
             if (options.length === 0) {
                 setError('No categories available to vote on');
                 return;
             }
-
             await signalRService.startCategoryVoting(roomCode, options);
             setError('');
         } catch (err) {
@@ -524,13 +429,10 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         onBack();
     };
 
-
-
-
-    const isWaitingState =
-        gameState === 'waiting' || gameState === 'waitingforplayers';
-
+    const isWaitingState = gameState === 'waiting' || gameState === 'waitingforplayers';
     const shouldShowGameSetup = isWaitingState && isHost;
+
+    console.log('Render - Players count:', players.length, 'Players:', players);
 
     return (
         <div className="multiplayer-game-room-container">
@@ -541,11 +443,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         <span className="room-code-label">Room Code</span>
                         <div className="room-code-display">
                             <span className="room-code">{roomCode}</span>
-                            <button
-                                className="copy-button"
-                                onClick={copyRoomCode}
-                                title="Copy room code"
-                            >
+                            <button className="copy-button" onClick={copyRoomCode} title="Copy room code">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                                     <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6z" />
                                     <path d="M2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z" />
@@ -563,11 +461,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     </div>
                 </div>
 
-                {error && (
-                    <div className="error-message">
-                        {error}
-                    </div>
-                )}
+                {error && <div className="error-message">{error}</div>}
 
                 <div className="players-section">
                     <h3>Players ({players.length})</h3>
@@ -577,33 +471,36 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                                 <p>Waiting for players to join...</p>
                             </div>
                         ) : (
-                            players.map((player, index) => (
-                                <div key={player.playerId || player.id || index} className="player-item">
-                                    <div className="player-avatar">
-                                        {(player.name?.charAt(0) || 'P').toUpperCase()}
+                            players.map((player, index) => {
+                                const isCurrentUser = player.playerId === parseInt(user.playerId);
+                                const isPlayerHost = isHost && isCurrentUser;
+
+                                return (
+                                    <div key={player.playerId || player.id || index} className="player-item">
+                                        <div className="player-avatar">
+                                            {(player.name?.charAt(0) || 'P').toUpperCase()}
+                                        </div>
+                                        <div className="player-info">
+                                            <span className="player-name">{player.name}</span>
+                                            <div className="player-badges">
+                                                {isCurrentUser && (
+                                                    <span className="you-badge">You</span>
+                                                )}
+                                                {isPlayerHost && (
+                                                    <span className="host-badge">Host</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="player-info">
-                                        <span className="player-name">{player.name}</span>
-                                        {player.playerId === parseInt(user.playerId) && (
-                                            <span className="you-badge">You</span>
-                                        )}
-                                        {isHost && player.playerId === parseInt(user.playerId) && (
-                                            <span className="host-badge">Host</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
+                                );
+                            }))}
                     </div>
                 </div>
-
-
 
                 {shouldShowGameSetup && (
                     <div className="game-setup">
                         <h3>Game Settings</h3>
 
-                        {/* When voting is NOT active: manual selection + OR + start voting */}
                         {!isVoting && (
                             <>
                                 <div className="category-selection">
@@ -616,7 +513,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                                     ) : categories.length > 0 ? (
                                         <div className="category-grid">
                                             {categories.map((category) => (
-
                                                 <button
                                                     key={category}
                                                     className={`category-button ${selectedCategory === category ? 'selected' : ''}`}
@@ -624,10 +520,10 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                                                         if (isCategoryLocked) return;
                                                         setSelectedCategory(category);
                                                     }}
+                                                    disabled={isCategoryLocked}
                                                 >
                                                     {category}
                                                 </button>
-
                                             ))}
                                         </div>
                                     ) : (
@@ -639,10 +535,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
                                 {isHost && (
                                     <>
-                                        <div className="or-divider">
-                                            <span>OR</span>
-                                        </div>
-
+                                        <div className="or-divider"><span>OR</span></div>
                                         <div className="voting-start">
                                             <label>Let players vote for category</label>
                                             <button
@@ -663,9 +556,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                             </>
                         )}
 
-
-
-                        {/* Start game works with either manually selected or voted category */}
                         <button
                             className="start-game-button"
                             onClick={handleStartGame}
@@ -689,21 +579,10 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     </div>
                 )}
 
-
                 {isWaitingState && isVoting && (
                     <div className="voting-panel">
                         <h4>Category Voting in Progress</h4>
                         <p>Tap a category to vote:</p>
-
-                        {typeof votingSecondsLeft === 'number' && (
-                            <div className="voting-timeout">
-                                <svg viewBox="0 0 16 16">
-                                    <circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" />
-                                    <path d="M8 3v5l3 2" stroke="currentColor" fill="none" />
-                                </svg>
-                                <span>Voting ends in {remainingSeconds}s</span>
-                            </div>
-                        )}
 
                         <div className="voting-options">
                             {votingCategories.map((cat) => (
@@ -714,24 +593,18 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                                 >
                                     <span>{cat}</span>
                                     <small>
-                                        {(voteTallies[cat] || 0)} vote
-                                        {(voteTallies[cat] || 0) !== 1 ? 's' : ''}
+                                        {(voteTallies[cat] || 0)} vote{(voteTallies[cat] || 0) !== 1 ? 's' : ''}
                                     </small>
                                 </button>
                             ))}
                         </div>
                         {isHost && (
-                            <button
-                                className="finish-voting-button"
-                                onClick={handleEndVoting}
-                            >
+                            <button className="finish-voting-button" onClick={handleEndVoting}>
                                 Finish Voting & Use Winner
                             </button>
                         )}
                     </div>
                 )}
-
-
 
                 {isWaitingState && !isHost && !isVoting && (
                     <div className="waiting-message">
@@ -743,7 +616,6 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         )}
                     </div>
                 )}
-
 
                 {gameState === 'in-progress' && (
                     <div className="game-in-progress">

@@ -135,7 +135,13 @@ public class GameService : IGameService
                 CorrectAnswerIndexes = q.CorrectAnswerIndexes,
                 Category = q.Category,
                 Difficulty = q.Difficulty
-            }).ToList()
+            }).ToList(),
+            PlayerAnswers = game.PlayerAnswers.Select(pa => new PlayerAnswerDto
+            {
+                PlayerId = pa.PlayerId,
+                QuestionId = pa.QuestionId,
+                SelectedAnswerIndexes = pa.SelectedAnswerIndexes
+            }).ToList(),
         };
     }
 
@@ -189,15 +195,16 @@ public class GameService : IGameService
         }
 
         // Normalize category name before saving
-        string normalizedCategory = NormalizeCategoryName(dto.Category);
-
-        settings.Category = string.IsNullOrWhiteSpace(normalizedCategory)
+        string normalizedCategory = string.IsNullOrWhiteSpace(dto.Category)
             ? "Geography"
-            : normalizedCategory;
+            : NormalizeCategoryName(dto.Category);
+
+        settings.Category = normalizedCategory;
 
         settings.Difficulty = string.IsNullOrWhiteSpace(dto.Difficulty)
             ? "medium"
             : dto.Difficulty.ToLower();
+
         settings.QuestionCount = dto.QuestionCount;
         settings.TimeLimitSeconds = dto.TimeLimitSeconds > 0 ? dto.TimeLimitSeconds : 15;
         await _gamesRepo.SaveChangesAsync();
@@ -273,7 +280,7 @@ public class GameService : IGameService
         }
         catch (Exception ex)
         {
-            // Log error but don't throw - cleanup is best effort
+
             Console.WriteLine($"Error cleaning up game {roomId}: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
@@ -281,16 +288,18 @@ public class GameService : IGameService
 
     public async Task RecordCategoryVoteAsync(string roomId, int playerId, string category)
     {
-        var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true); 
-        
+        var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true);
+
         if (game == null)
         {
             throw new GameNotFoundException(roomId);
         }
+
         if (string.IsNullOrWhiteSpace(category))
         {
             throw new GeneralServiceException("Category cannot be empty.");
         }
+
         if (game.State != GameState.WaitingForPlayers)
         {
             throw new GameStateException("Votes are only accepted while waiting for players.");
@@ -303,16 +312,19 @@ public class GameService : IGameService
 
         string normalizedCategory = NormalizeCategoryName(category);
 
-        // REMOVE OLD VOTE IF EXISTS
+
         if (game.PlayerVotes.TryGetValue(playerId, out string? oldCategory))
         {
+
             if (oldCategory.Equals(normalizedCategory, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
+
             if (game.CategoryVotes.ContainsKey(oldCategory))
             {
                 game.CategoryVotes[oldCategory]--;
+
                 if (game.CategoryVotes[oldCategory] <= 0)
                 {
                     game.CategoryVotes.Remove(oldCategory);
@@ -321,6 +333,7 @@ public class GameService : IGameService
         }
 
         game.PlayerVotes[playerId] = normalizedCategory;
+
         if (game.CategoryVotes.ContainsKey(normalizedCategory))
         {
             game.CategoryVotes[normalizedCategory]++;
@@ -329,6 +342,47 @@ public class GameService : IGameService
         {
             game.CategoryVotes.Add(normalizedCategory, 1);
         }
+
         await _gamesRepo.SaveChangesAsync();
     }
+
+
+    public async Task<GameDetailsDto> ResetGameAsync(string roomId, int requestingPlayerId)
+    {
+        var game = await _gamesRepo.GetGameAsync(roomId, includePlayers: true, includeQuestions: true, includeAnswers: true);
+        if (game == null) throw new GameNotFoundException(roomId);
+
+        if (game.HostPlayerId != requestingPlayerId)
+            throw new GameStateException("Only the host can reset the game.");
+
+        Console.WriteLine($"Resetting game {roomId} - Current state: {game.State}");
+
+        // Reset state - allow reset from any state (Finished, InProgress, etc)
+        game.State = GameState.WaitingForPlayers;
+        game.StartedAt = null;
+        game.EndedAt = null;
+        game.CurrentQuestionIndex = -1;
+
+        // Reset scores
+        foreach (var gp in game.GamePlayers)
+        {
+            if (gp.Player != null)
+            {
+                gp.Player.Score = 0;
+            }
+        }
+
+        // Clear answers + questions + voting
+        await _gamesRepo.RemoveAnswersForGameAsync(roomId);
+        game.Questions.Clear();
+        game.ClearVoting();
+
+        await _gamesRepo.SaveChangesAsync();
+
+        Console.WriteLine($"Game {roomId} reset successfully - New state: {game.State}");
+
+        return (await GetGameDetailsAsync(roomId))!;
+    }
+
+
 }

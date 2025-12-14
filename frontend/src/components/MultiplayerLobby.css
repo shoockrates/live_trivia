@@ -74,13 +74,19 @@
     color: #ffffff;
     border: none;
     border-radius: 12px;
-    padding: 16px 32px;
+    padding: 0 32px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 8px 24px rgba(110, 123, 255, 0.3);
     width: 100%;
+    min-height: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .create-button:hover:not(:disabled) {
@@ -158,13 +164,19 @@
     color: #ffffff;
     border: none;
     border-radius: 8px;
-    padding: 12px 20px;
+    padding: 0 20px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 16px rgba(46, 204, 113, 0.3);
     white-space: nowrap;
+    min-height: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .join-button:hover:not(:disabled) {
@@ -179,14 +191,15 @@
 }
 
 .error-message {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #ef4444;
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    color: #e74c3c;
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: 12px;
+    margin-bottom: 24px;
     font-size: 14px;
     text-align: center;
-    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
 }
 
 .back-button {
@@ -242,25 +255,11 @@
 
     .join-button {
         width: 100%;
-        padding: 16px;
+        height: 52px;
     }
 }
 
-
-/* Error Message Styling */
-.error-message {
-    background: rgba(231, 76, 60, 0.1);
-    border: 1px solid rgba(231, 76, 60, 0.3);
-    color: #e74c3c;
-    padding: 12px 16px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    font-size: 14px;
-    text-align: center;
-    backdrop-filter: blur(10px);
-}
-
-/* Loading States */
+/* Loading Categories */
 .loading-categories {
     display: flex;
     align-items: center;
@@ -293,6 +292,8 @@
     border-top: 2px solid #6e7bff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    margin: 0;
+    flex-shrink: 0;
 }
 
 /* No Players Message */
@@ -342,18 +343,6 @@
     margin: 8px 0 0 0;
 }
 
-/* Start Game Button Loading State */
-.start-game-button:disabled {
-    position: relative;
-}
-
-.start-game-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
 /* You Badge */
 .you-badge {
     background: linear-gradient(135deg, #3498db, #2980b9);
@@ -364,6 +353,41 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Connection Status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.connection-status.connecting {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.connection-status.connected {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Responsive Adjustments */
