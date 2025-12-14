@@ -1,6 +1,0 @@
-2025-12-14 22:58:08.141 +02:00 [WRN] Failed to determine the https port for redirect.
-2025-12-14 23:05:19.804 +02:00 [ERR] Failed executing DbCommand (4ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
-ALTER TABLE "PlayerAnswers" ADD "Score" double precision NOT NULL DEFAULT 0.0;
-2025-12-14 23:10:06.182 +02:00 [WRN] Failed to determine the https port for redirect.
-2025-12-14 23:12:37.456 +02:00 [WRN] Failed to determine the https port for redirect.
-2025-12-14 23:17:49.462 +02:00 [WRN] Failed to determine the https port for redirect.
