@@ -13,4 +13,6 @@ public class User : BaseEntity
     public int? PlayerId { get; set; }
 
     public virtual Player? Player { get; set; }
+
+    public bool IsAdmin { get; set; } = false;
 }

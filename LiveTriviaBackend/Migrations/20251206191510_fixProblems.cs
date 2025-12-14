@@ -8,55 +8,40 @@ namespace LiveTriviaBackend.Migrations
     public partial class fixProblems : Migration
     {
         /// <inheritdoc />
+
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<double>(
-                name: "Score",
-                table: "PlayerAnswers",
-                type: "double precision",
-                nullable: false,
-                defaultValue: 0.0);
+            migrationBuilder.Sql("""
+        ALTER TABLE "PlayerAnswers"
+        ADD COLUMN IF NOT EXISTS "Score" double precision NOT NULL DEFAULT 0.0;
+    """);
 
-            migrationBuilder.AddColumn<int>(
-                name: "TimeLeft",
-                table: "PlayerAnswers",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
+            migrationBuilder.Sql("""
+        ALTER TABLE "PlayerAnswers"
+        ADD COLUMN IF NOT EXISTS "TimeLeft" integer NOT NULL DEFAULT 0;
+    """);
 
-            migrationBuilder.AddColumn<string>(
-                name: "CategoryVotes",
-                table: "Games",
-                type: "text",
-                nullable: false,
-                defaultValue: "");
+            migrationBuilder.Sql("""
+        ALTER TABLE "Games"
+        ADD COLUMN IF NOT EXISTS "CategoryVotes" text NOT NULL DEFAULT '';
+    """);
 
-            migrationBuilder.AddColumn<string>(
-                name: "PlayerVotes",
-                table: "Games",
-                type: "text",
-                nullable: false,
-                defaultValue: "");
+            migrationBuilder.Sql("""
+        ALTER TABLE "Games"
+        ADD COLUMN IF NOT EXISTS "PlayerVotes" text NOT NULL DEFAULT '';
+    """);
         }
+
 
         /// <inheritdoc />
+
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Score",
-                table: "PlayerAnswers");
-
-            migrationBuilder.DropColumn(
-                name: "TimeLeft",
-                table: "PlayerAnswers");
-
-            migrationBuilder.DropColumn(
-                name: "CategoryVotes",
-                table: "Games");
-
-            migrationBuilder.DropColumn(
-                name: "PlayerVotes",
-                table: "Games");
+            migrationBuilder.Sql("""ALTER TABLE "PlayerAnswers" DROP COLUMN IF EXISTS "Score";""");
+            migrationBuilder.Sql("""ALTER TABLE "PlayerAnswers" DROP COLUMN IF EXISTS "TimeLeft";""");
+            migrationBuilder.Sql("""ALTER TABLE "Games" DROP COLUMN IF EXISTS "CategoryVotes";""");
+            migrationBuilder.Sql("""ALTER TABLE "Games" DROP COLUMN IF EXISTS "PlayerVotes";""");
         }
+
     }
 }

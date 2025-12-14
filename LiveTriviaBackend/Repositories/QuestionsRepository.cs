@@ -1,5 +1,6 @@
 using live_trivia.Data;
 using Microsoft.EntityFrameworkCore;
+using live_trivia.Dtos;
 
 namespace live_trivia.Repositories
 {
@@ -92,6 +93,76 @@ namespace live_trivia.Repositories
             await _context.SaveChangesAsync();
 
             return newQuestions.Count;
+        }
+
+        public async Task<List<string>> GetCategoriesAsync()
+        {
+            return await _context.Questions
+                .Select(q => q.Category)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+        }
+
+        public async Task<QuestionBankImportResultDto> ImportQuestionBankAsync(QuestionBankImportDto dto)
+        {
+            // load existing texts once
+            var existingTexts = await _context.Questions
+                .Select(q => q.Text)
+                .ToListAsync();
+
+            var existingSet = existingTexts.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            int total = dto.Questions.Count;
+            int invalid = 0;
+            int duplicates = 0;
+
+            var toAdd = new List<Question>();
+
+            foreach (var q in dto.Questions)
+            {
+                // basic validation
+                if (string.IsNullOrWhiteSpace(q.Text) ||
+                    q.Answers == null || q.Answers.Count < 2 ||
+                    q.CorrectAnswerIndexes == null || q.CorrectAnswerIndexes.Count == 0 ||
+                    q.CorrectAnswerIndexes.Any(i => i < 0 || i >= q.Answers.Count))
+                {
+                    invalid++;
+                    continue;
+                }
+
+                if (existingSet.Contains(q.Text))
+                {
+                    duplicates++;
+                    continue;
+                }
+
+                existingSet.Add(q.Text);
+
+                toAdd.Add(new Question
+                {
+                    Text = q.Text.Trim(),
+                    Answers = q.Answers,
+                    CorrectAnswerIndexes = q.CorrectAnswerIndexes,
+                    Category = string.IsNullOrWhiteSpace(q.Category) ? "Any" : q.Category.Trim(),
+                    Difficulty = string.IsNullOrWhiteSpace(q.Difficulty) ? "medium" : q.Difficulty.Trim(),
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            if (toAdd.Count > 0)
+            {
+                _context.Questions.AddRange(toAdd);
+                await _context.SaveChangesAsync();
+            }
+
+            return new QuestionBankImportResultDto
+            {
+                Total = total,
+                Added = toAdd.Count,
+                SkippedDuplicates = duplicates,
+                SkippedInvalid = invalid
+            };
         }
     }
 }
