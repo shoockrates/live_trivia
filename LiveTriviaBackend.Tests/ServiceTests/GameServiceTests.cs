@@ -296,7 +296,7 @@ public class GameServiceTests
         );
     }
 
-    // Note: If GetGameDetailsAsync is synchronous, this signature is wrong (but I'm leaving it)
+    [Fact]
     public async Task GetGameDetailsAsync_ReturnsGameDetails_WhenGameExists()
     {
         var db = GetInMemoryDb();
@@ -335,5 +335,227 @@ public class GameServiceTests
         {
             await service.UpdateGameSettingsAsync("12345", settingsDto);
         });
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenGameNotFound()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<GameNotFoundException>(() =>
+            service.RecordCategoryVoteAsync("NonExistentRoom", 1, "Geography")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenCategoryIsEmpty()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<GeneralServiceException>(() =>
+            service.RecordCategoryVoteAsync("12345", 1, "")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenGameNotWaitingForPlayers()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.InProgress };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<GameStateException>(() =>
+            service.RecordCategoryVoteAsync("12345", 1, "Geography")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenPlayerNotInGame()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<PlayerNotInGameException>(() =>
+            service.RecordCategoryVoteAsync("12345", 999, "Geography")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_AddsVote_WhenValid()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "Geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.True(updatedGame.PlayerVotes.ContainsKey(1));
+        Assert.Equal("Geography", updatedGame.PlayerVotes[1]);
+        Assert.True(updatedGame.CategoryVotes.ContainsKey("Geography"));
+        Assert.Equal(1, updatedGame.CategoryVotes["Geography"]);
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_UpdatesVote_WhenPlayerVotesAgain()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        game.PlayerVotes[1] = "History";
+        game.CategoryVotes["History"] = 1;
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "Geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.Equal("Geography", updatedGame.PlayerVotes[1]);
+        Assert.False(updatedGame.CategoryVotes.ContainsKey("History"));
+        Assert.Equal(1, updatedGame.CategoryVotes["Geography"]);
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ReturnsEarly_WhenSameCategoryVoted()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        game.PlayerVotes[1] = "Geography";
+        game.CategoryVotes["Geography"] = 1;
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "Geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.Equal(1, updatedGame.CategoryVotes["Geography"]);
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_NormalizesCategoryName()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.True(updatedGame.CategoryVotes.ContainsKey("Geography"));
+    }
+
+    [Fact]
+    public async Task CleanupGameAsync_RemovesGame_WhenGameExists()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345" };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        _mockActiveGamesService.Setup(s => s.TryRemoveGame("12345")).Returns(true);
+
+        var service = CreateGameService(db);
+
+        await service.CleanupGameAsync("12345");
+
+        var gameFromDb = await db.Games.FirstOrDefaultAsync(g => g.RoomId == "12345");
+        Assert.Null(gameFromDb);
+        _mockActiveGamesService.Verify(s => s.TryRemoveGame("12345"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CleanupGameAsync_RemovesFromActiveGames_WhenGameNotFound()
+    {
+        var db = GetInMemoryDb();
+        _mockActiveGamesService.Setup(s => s.TryRemoveGame("NonExistentRoom")).Returns(true);
+
+        var service = CreateGameService(db);
+
+        await service.CleanupGameAsync("NonExistentRoom");
+
+        _mockActiveGamesService.Verify(s => s.TryRemoveGame("NonExistentRoom"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CleanupGameAsync_HandlesException_WhenDeleteFails()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345" };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        _mockActiveGamesService.Setup(s => s.TryRemoveGame("12345")).Returns(true);
+
+        var service = CreateGameService(db);
+        
+        // Dispose the context to cause an exception on next operation
+        await db.DisposeAsync();
+
+        // Should not throw - cleanup is best effort
+        await service.CleanupGameAsync("12345");
     }
 }

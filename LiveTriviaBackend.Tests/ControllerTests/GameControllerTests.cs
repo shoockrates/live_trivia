@@ -11,6 +11,8 @@ using live_trivia.Interfaces;
 using live_trivia.Hubs;
 using live_trivia.Dtos;
 using live_trivia;
+using live_trivia.Exceptions;
+using System.Linq;
 
 namespace live_trivia.Tests
 {
@@ -42,7 +44,7 @@ namespace live_trivia.Tests
             var mockClients = new Mock<IHubClients>();
             var mockGroup = new Mock<IClientProxy>();
             
-            // 2. Setup IClientProxy.SendCoreAsync instead of SendAsync
+            // 2. Setup IClientProxy.SendCoreAsync (SendAsync extension method calls this internally)
             mockGroup
                 .Setup(g => g.SendCoreAsync(
                     It.IsAny<string>(), 
@@ -121,11 +123,26 @@ namespace live_trivia.Tests
         }
 
         [Fact]
+        public async Task CreateGame_ReturnsUnauthorized_WhenPlayerIsNull()
+        {
+            var roomId = "123";
+            _mockGameService.Setup(s => s.GetPlayerByIdAsync(1))
+                .ReturnsAsync((Player?)null);
+
+            var result = await _controller.CreateGame(roomId);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
         public async Task StartGame_ReturnsOk_WhenSuccessful()
         {
             var roomId = "123";
+            var gameDetails = new GameDetailsDto { RoomId = roomId };
             _mockGameService.Setup(s => s.StartGameAsync(roomId))
                 .ReturnsAsync(true);
+            _mockGameService.Setup(s => s.GetGameDetailsAsync(roomId))
+                .ReturnsAsync(gameDetails);
 
             var result = await _controller.StartGame(roomId);
 
@@ -142,6 +159,21 @@ namespace live_trivia.Tests
             var result = await _controller.StartGame(roomId);
 
             Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task StartGame_ReturnsBadRequest_WhenNotEnoughQuestions()
+        {
+            var roomId = "123";
+            var exception = new NotEnoughQuestionsException("Geography", 10);
+            _mockGameService.Setup(s => s.StartGameAsync(roomId))
+                .ThrowsAsync(exception);
+
+            var result = await _controller.StartGame(roomId);
+
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+            var value = badRequest.Value;
+            Assert.NotNull(value);
         }
 
         [Fact]
@@ -176,6 +208,41 @@ namespace live_trivia.Tests
             var result = await _controller.JoinGame(roomId);
 
             Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task JoinGame_ReturnsNotFound_WhenGameIsNull()
+        {
+            var roomId = "123";
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync((Game?)null);
+
+            var result = await _controller.JoinGame(roomId);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task JoinGame_ReturnsUnauthorized_WhenPlayerIsNull()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 1 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _mockGameService.Setup(s => s.GetPlayerByIdAsync(1)).ReturnsAsync((Player?)null);
+
+            var result = await _controller.JoinGame(roomId);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task JoinGame_ReturnsUnauthorized_WhenPlayerIdClaimMissing()
+        {
+            var roomId = "123";
+            _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal();
+
+            var result = await _controller.JoinGame(roomId);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
         }
 
         [Fact]
@@ -226,6 +293,246 @@ namespace live_trivia.Tests
             _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
 
             var result = await _controller.UpdateSettings(roomId, dto);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task UpdateSettings_ReturnsNotFound_WhenGameIsNull()
+        {
+            var roomId = "123";
+            var dto = new GameSettingsDto { Category = "History", Difficulty = "Medium", QuestionCount = 10, TimeLimitSeconds = 20 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync((Game?)null);
+
+            var result = await _controller.UpdateSettings(roomId, dto);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task NextQuestion_ReturnsOk_WhenSuccessful()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 1, CurrentQuestionIndex = 0 };
+            game.Questions.Add(new Question("Test Question", new List<string> { "A", "B" }, new List<int> { 0 }, "Easy", "Geography"));
+            game.Questions.Add(new Question("Test Question 2", new List<string> { "A", "B" }, new List<int> { 0 }, "Easy", "Geography"));
+            var gameDetails = new GameDetailsDto { RoomId = roomId };
+
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _mockGameService.Setup(s => s.SaveChangesAsync()).Returns(Task.CompletedTask);
+            _mockGameService.Setup(s => s.GetGameDetailsAsync(roomId)).ReturnsAsync(gameDetails);
+
+            var result = await _controller.NextQuestion(roomId);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(ok.Value);
+        }
+
+        [Fact]
+        public async Task NextQuestion_ReturnsNotFound_WhenGameIsNull()
+        {
+            var roomId = "123";
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync((Game?)null);
+
+            var result = await _controller.NextQuestion(roomId);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task NextQuestion_ReturnsUnauthorized_WhenPlayerIdClaimMissing()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 1 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal();
+
+            var result = await _controller.NextQuestion(roomId);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task NextQuestion_ReturnsForbid_WhenNotHost()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 99 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+
+            var result = await _controller.NextQuestion(roomId);
+
+            Assert.IsType<ForbidResult>(result);
+        }
+
+        [Fact]
+        public async Task NextQuestion_ReturnsOk_WhenGameFinished()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 1 };
+            game.Questions.Add(new Question("Test Question", new List<string> { "A", "B" }, new List<int> { 0 }, "Easy", "Geography"));
+            // Set to last question index so MoveNextQuestion will return false
+            game.CurrentQuestionIndex = game.Questions.Count - 1;
+
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _mockGameService.Setup(s => s.SaveChangesAsync()).Returns(Task.CompletedTask);
+            _mockGameService.Setup(s => s.CleanupGameAsync(roomId)).Returns(Task.CompletedTask);
+
+            var result = await _controller.NextQuestion(roomId);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(ok.Value);
+        }
+
+        [Fact]
+        public async Task SubmitAnswer_ReturnsOk_WhenSuccessful()
+        {
+            var roomId = "123";
+            var player = new Player { Id = 1, Name = "TestPlayer" };
+            var question = new Question("Test Question", new List<string> { "A", "B" }, new List<int> { 0 }, "Easy", "Geography");
+            var game = new Game { RoomId = roomId };
+            game.Questions.Add(question);
+            game.GamePlayers.Add(new GamePlayer { PlayerId = 1, Player = player, GameRoomId = roomId });
+            var request = new AnswerRequest { QuestionId = question.Id, SelectedAnswerIndexes = new List<int> { 0 }, TimeLeft = 10 };
+
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _mockGameService.Setup(s => s.SaveChangesAsync()).Returns(Task.CompletedTask);
+
+            var result = await _controller.SubmitAnswer(roomId, request);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var playerAnswer = Assert.IsType<PlayerAnswer>(ok.Value);
+            Assert.Equal(player.Id, playerAnswer.PlayerId);
+            Assert.Equal(question.Id, playerAnswer.QuestionId);
+        }
+
+        [Fact]
+        public async Task SubmitAnswer_ReturnsNotFound_WhenGameIsNull()
+        {
+            var roomId = "123";
+            var request = new AnswerRequest { QuestionId = 1, SelectedAnswerIndexes = new List<int> { 0 }, TimeLeft = 10 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync((Game?)null);
+
+            var result = await _controller.SubmitAnswer(roomId, request);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task SubmitAnswer_ReturnsUnauthorized_WhenPlayerIdClaimMissing()
+        {
+            var roomId = "123";
+            var request = new AnswerRequest { QuestionId = 1, SelectedAnswerIndexes = new List<int> { 0 }, TimeLeft = 10 };
+            _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal();
+
+            var result = await _controller.SubmitAnswer(roomId, request);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task SubmitAnswer_ReturnsNotFound_WhenPlayerNotInGame()
+        {
+            var roomId = "123";
+            var question = new Question("Test Question", new List<string> { "A", "B" }, new List<int> { 0 }, "Easy", "Geography");
+            var game = new Game { RoomId = roomId };
+            game.Questions.Add(question);
+            // No players in game
+            var request = new AnswerRequest { QuestionId = question.Id, SelectedAnswerIndexes = new List<int> { 0 }, TimeLeft = 10 };
+
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+
+            var result = await _controller.SubmitAnswer(roomId, request);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task SubmitAnswer_ReturnsNotFound_WhenQuestionNotFound()
+        {
+            var roomId = "123";
+            var player = new Player { Id = 1, Name = "TestPlayer" };
+            var game = new Game { RoomId = roomId };
+            game.GamePlayers.Add(new GamePlayer { PlayerId = 1, Player = player, GameRoomId = roomId });
+            // No questions in game
+            var request = new AnswerRequest { QuestionId = 999, SelectedAnswerIndexes = new List<int> { 0 }, TimeLeft = 10 };
+
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+
+            var result = await _controller.SubmitAnswer(roomId, request);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public void GetActiveGames_ReturnsOk_WithActiveGames()
+        {
+            var activeGames = new List<string> { "room1", "room2", "room3" };
+            _mockActiveGamesService.Setup(s => s.GetActiveGameIds()).Returns(activeGames);
+
+            var result = _controller.GetActiveGames();
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.Equal(activeGames, ok.Value);
+        }
+
+        [Fact]
+        public void GetActiveGames_ReturnsOk_WithEmptyList()
+        {
+            _mockActiveGamesService.Setup(s => s.GetActiveGameIds()).Returns(new List<string>());
+
+            var result = _controller.GetActiveGames();
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var games = Assert.IsType<List<string>>(ok.Value);
+            Assert.Empty(games);
+        }
+
+        [Fact]
+        public async Task DeleteGame_ReturnsOk_WhenSuccessful()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 1 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _mockGameService.Setup(s => s.CleanupGameAsync(roomId)).Returns(Task.CompletedTask);
+
+            var result = await _controller.DeleteGame(roomId);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            Assert.NotNull(ok.Value);
+        }
+
+        [Fact]
+        public async Task DeleteGame_ReturnsNotFound_WhenGameIsNull()
+        {
+            var roomId = "123";
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync((Game?)null);
+
+            var result = await _controller.DeleteGame(roomId);
+
+            Assert.IsType<NotFoundObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task DeleteGame_ReturnsUnauthorized_WhenPlayerIdClaimMissing()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 1 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+            _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal();
+
+            var result = await _controller.DeleteGame(roomId);
+
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task DeleteGame_ReturnsForbid_WhenNotHost()
+        {
+            var roomId = "123";
+            var game = new Game { RoomId = roomId, HostPlayerId = 99 };
+            _mockGameService.Setup(s => s.GetGameAsync(roomId)).ReturnsAsync(game);
+
+            var result = await _controller.DeleteGame(roomId);
 
             Assert.IsType<ForbidResult>(result);
         }

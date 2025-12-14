@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Diagnostics.CodeAnalysis;
 
 namespace live_trivia.Data
 {
+    [ExcludeFromCodeCoverage]
     public class TriviaDbContext : DbContext
     {
         public TriviaDbContext(DbContextOptions<TriviaDbContext> options) : base(options) { }
