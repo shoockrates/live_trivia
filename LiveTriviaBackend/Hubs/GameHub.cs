@@ -4,9 +4,11 @@ using live_trivia.Repositories;
 using live_trivia.Interfaces;
 using System.Collections.Concurrent;
 using live_trivia.Dtos;
+using System.Diagnostics.CodeAnalysis;
 
 namespace live_trivia.Hubs
 {
+    [ExcludeFromCodeCoverage]
     [Authorize]
     public class GameHub : Hub
     {

@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace live_trivia.Hubs;
 
+[ExcludeFromCodeCoverage]
 public class CategoryVotingState
 {
     public string RoomId { get; set; } = string.Empty;

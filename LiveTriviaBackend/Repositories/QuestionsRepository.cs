@@ -36,7 +36,7 @@ namespace live_trivia.Repositories
         {
             string normalized = NormalizeCategoryName(category);
             return await _context.Questions
-                .Where(q => EF.Functions.ILike(q.Category, normalized))
+                .Where(q => q.Category.ToLower() == normalized.ToLower())
                 .ToListAsync();
         }
 
@@ -47,19 +47,23 @@ namespace live_trivia.Repositories
             if (!string.IsNullOrWhiteSpace(category))
             {
                 string normalizedCategory = NormalizeCategoryName(category);
-                query = query.Where(q => EF.Functions.ILike(q.Category, normalizedCategory));
+                query = query.Where(q => q.Category.ToLower() == normalizedCategory.ToLower());
             }
 
             // Only filter by difficulty if it's explicitly provided and not "any"
             if (!string.IsNullOrWhiteSpace(difficulty) && difficulty.ToLower() != "any")
             {
-                query = query.Where(q => EF.Functions.ILike(q.Difficulty, difficulty));
+                string normalizedDifficulty = difficulty.ToLower();
+                query = query.Where(q => q.Difficulty.ToLower() == normalizedDifficulty);
             }
 
-            return await query
-                .OrderBy(q => EF.Functions.Random())
-                .Take(count)
-                .ToListAsync();
+            var questionsInScope = await query.ToListAsync();
+                var randomQuestions = questionsInScope
+                    .OrderBy(q => Guid.NewGuid())
+                    .Take(count)
+                    .ToList();
+
+                return randomQuestions;
         }
 
         // Helper method to normalize category names
@@ -71,7 +75,6 @@ namespace live_trivia.Repositories
             // Convert to lowercase and trim
             category = category.Trim().ToLower();
 
-            // Capitalize first letter of each word for general cases
             return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(category);
         }
 

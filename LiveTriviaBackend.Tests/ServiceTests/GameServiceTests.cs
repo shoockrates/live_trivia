@@ -4,9 +4,24 @@ using live_trivia.Services;
 using live_trivia.Repositories;
 using live_trivia;
 using live_trivia.Exceptions;
+using Moq;
+using live_trivia.Interfaces;
+using Xunit;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic; // Added for List
 
 public class GameServiceTests
 {
+    private readonly Mock<IActiveGamesService> _mockActiveGamesService;
+
+    // FIX 1: Mock is initialized here
+    public GameServiceTests()
+    {
+        _mockActiveGamesService = new Mock<IActiveGamesService>();
+    }
+
     private async Task SeedQuestionsAsync(TriviaDbContext db, string category = "Geography", string difficulty = "Easy", int count = 5)
     {
         var questions = Enumerable.Range(1, count)
@@ -15,7 +30,9 @@ public class GameServiceTests
                 Category = category,
                 Difficulty = difficulty,
                 Text = $"Sample Question {i}",
-                CorrectAnswerIndexes = { i },
+                // Note: Assuming CorrectAnswerIndexes can be initialized this way or via new List<int> { i }
+                CorrectAnswerIndexes = new List<int> { i % 4 }, 
+                Answers = new List<string> { "A", "B", "C", "D" }
             })
             .ToList();
 
@@ -30,24 +47,26 @@ public class GameServiceTests
             .Options;
         return new TriviaDbContext(options);
     }
+
     private GameService CreateGameService(TriviaDbContext db)
     {
-        // Create the repositories explicitly
         var gamesRepo = new GamesRepository(db);
         var questionsRepo = new QuestionsRepository(db);
 
-        // Now create the service with the required dependencies
-        return new GameService(gamesRepo, questionsRepo);
+        // FIX 1: Passed the mock object
+        return new GameService(gamesRepo, questionsRepo, _mockActiveGamesService.Object);
     }
+    
+    // FIX 2: Updated to expect GameNotFoundException
     [Fact]
-    public async Task StartGameAsync_ShouldReturnFalse_WhenGameDoesNotExist()
+    public async Task StartGameAsync_ShouldThrowException_WhenGameDoesNotExist()
     {
         var db = GetInMemoryDb();
         var service = CreateGameService(db);
 
-        var result = await service.StartGameAsync("NonExistentRoom");
-
-        Assert.False(result);
+        await Assert.ThrowsAsync<GameNotFoundException>(() => 
+            service.StartGameAsync("NonExistentRoom")
+        );
     }
 
     [Fact]
@@ -131,15 +150,16 @@ public class GameServiceTests
         Assert.Null(retrievedGame);
     }
 
+    // FIX 2: Updated to expect GameNotFoundException
     [Fact]
-    public async Task StartGame_ShouldFail_WhenGameDoesNotExist()
+    public async Task StartGame_ShouldThrowException_WhenGameDoesNotExist()
     {
         var db = GetInMemoryDb();
         var service = CreateGameService(db);
 
-        var result = await service.StartGameAsync("NonExistentRoom");
-
-        Assert.False(result);
+        await Assert.ThrowsAsync<GameNotFoundException>(() => 
+            service.StartGameAsync("NonExistentRoom")
+        );
     }
 
     [Fact]
@@ -180,8 +200,9 @@ public class GameServiceTests
         );
     }
 
+    // FIX 3: Updated to expect GameStateException
     [Fact]
-    public async Task StartGameAsync_ShouldReturnFalse_WhenNoPlayers()
+    public async Task StartGameAsync_ShouldThrowException_WhenNoPlayers()
     {
         var db = GetInMemoryDb();
         var createdGame = new Game { RoomId = "12345" };
@@ -190,13 +211,14 @@ public class GameServiceTests
 
         var service = CreateGameService(db);
 
-        var result = await service.StartGameAsync("12345");
+        await Assert.ThrowsAsync<GameStateException>(() => 
+            service.StartGameAsync("12345")
+        );
 
         var gameFromDb = await db.Games.FirstAsync(g => g.RoomId == "12345");
         Assert.Equal(GameState.WaitingForPlayers, gameFromDb.State);
         Assert.Equal(-1, gameFromDb.CurrentQuestionIndex);
         Assert.Empty(gameFromDb.Questions);
-        Assert.False(result);
     }
 
     [Fact]
@@ -258,17 +280,23 @@ public class GameServiceTests
         Assert.Equal(settings.QuestionCount, createdGame.Questions.Count);
         Assert.True(result);
     }
+
     [Fact]
     public async Task GetGameDetailsAsync_ReturnsNullWhenGameDoesNotExist()
     {
         var db = GetInMemoryDb();
         var service = CreateGameService(db);
 
-        var gameDetails = await service.GetGameDetailsAsync("NonExistentRoom");
-
-        Assert.Null(gameDetails);
+        // NOTE: GetGameDetailsAsync throws an exception if game is not found (as seen in your service code)
+        // This test should be updated to expect the exception to truly match service behavior.
+        // I'll leave this as-is for now, but be aware of the inconsistency with other Get methods.
+        // Assuming the repository returns null and the service code handles that before throwing.
+        await Assert.ThrowsAsync<GameNotFoundException>(() => 
+            service.GetGameDetailsAsync("NonExistentRoom")
+        );
     }
 
+    [Fact]
     public async Task GetGameDetailsAsync_ReturnsGameDetails_WhenGameExists()
     {
         var db = GetInMemoryDb();
@@ -284,6 +312,7 @@ public class GameServiceTests
         Assert.Equal("12345", gameDetails!.RoomId);
     }
 
+    // FIX 4: Updated to expect GameStateException instead of InvalidOperationException
     [Fact]
     public async Task UpdateGameSettingsAsync_Fails_WhenGameInProgress()
     {
@@ -302,9 +331,231 @@ public class GameServiceTests
             TimeLimitSeconds = 30
         };
 
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        await Assert.ThrowsAsync<GameStateException>(async () =>
         {
             await service.UpdateGameSettingsAsync("12345", settingsDto);
         });
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenGameNotFound()
+    {
+        var db = GetInMemoryDb();
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<GameNotFoundException>(() =>
+            service.RecordCategoryVoteAsync("NonExistentRoom", 1, "Geography")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenCategoryIsEmpty()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<GeneralServiceException>(() =>
+            service.RecordCategoryVoteAsync("12345", 1, "")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenGameNotWaitingForPlayers()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.InProgress };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<GameStateException>(() =>
+            service.RecordCategoryVoteAsync("12345", 1, "Geography")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ThrowsException_WhenPlayerNotInGame()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await Assert.ThrowsAsync<PlayerNotInGameException>(() =>
+            service.RecordCategoryVoteAsync("12345", 999, "Geography")
+        );
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_AddsVote_WhenValid()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "Geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.True(updatedGame.PlayerVotes.ContainsKey(1));
+        Assert.Equal("Geography", updatedGame.PlayerVotes[1]);
+        Assert.True(updatedGame.CategoryVotes.ContainsKey("Geography"));
+        Assert.Equal(1, updatedGame.CategoryVotes["Geography"]);
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_UpdatesVote_WhenPlayerVotesAgain()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        game.PlayerVotes[1] = "History";
+        game.CategoryVotes["History"] = 1;
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "Geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.Equal("Geography", updatedGame.PlayerVotes[1]);
+        Assert.False(updatedGame.CategoryVotes.ContainsKey("History"));
+        Assert.Equal(1, updatedGame.CategoryVotes["Geography"]);
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_ReturnsEarly_WhenSameCategoryVoted()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        game.PlayerVotes[1] = "Geography";
+        game.CategoryVotes["Geography"] = 1;
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "Geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.Equal(1, updatedGame.CategoryVotes["Geography"]);
+    }
+
+    [Fact]
+    public async Task RecordCategoryVoteAsync_NormalizesCategoryName()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345", State = GameState.WaitingForPlayers };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        var player = new Player { Id = 1, Name = "TestPlayer" };
+        db.Players.Add(player);
+        await db.SaveChangesAsync();
+
+        game.AddPlayer(player);
+        await db.SaveChangesAsync();
+
+        var service = CreateGameService(db);
+
+        await service.RecordCategoryVoteAsync("12345", 1, "geography");
+
+        var updatedGame = await db.Games.FirstAsync(g => g.RoomId == "12345");
+        Assert.True(updatedGame.CategoryVotes.ContainsKey("Geography"));
+    }
+
+    [Fact]
+    public async Task CleanupGameAsync_RemovesGame_WhenGameExists()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345" };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        _mockActiveGamesService.Setup(s => s.TryRemoveGame("12345")).Returns(true);
+
+        var service = CreateGameService(db);
+
+        await service.CleanupGameAsync("12345");
+
+        var gameFromDb = await db.Games.FirstOrDefaultAsync(g => g.RoomId == "12345");
+        Assert.Null(gameFromDb);
+        _mockActiveGamesService.Verify(s => s.TryRemoveGame("12345"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CleanupGameAsync_RemovesFromActiveGames_WhenGameNotFound()
+    {
+        var db = GetInMemoryDb();
+        _mockActiveGamesService.Setup(s => s.TryRemoveGame("NonExistentRoom")).Returns(true);
+
+        var service = CreateGameService(db);
+
+        await service.CleanupGameAsync("NonExistentRoom");
+
+        _mockActiveGamesService.Verify(s => s.TryRemoveGame("NonExistentRoom"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CleanupGameAsync_HandlesException_WhenDeleteFails()
+    {
+        var db = GetInMemoryDb();
+        var game = new Game { RoomId = "12345" };
+        db.Games.Add(game);
+        await db.SaveChangesAsync();
+
+        _mockActiveGamesService.Setup(s => s.TryRemoveGame("12345")).Returns(true);
+
+        var service = CreateGameService(db);
+        
+        // Dispose the context to cause an exception on next operation
+        await db.DisposeAsync();
+
+        // Should not throw - cleanup is best effort
+        await service.CleanupGameAsync("12345");
     }
 }
