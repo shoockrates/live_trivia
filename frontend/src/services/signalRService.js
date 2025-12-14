@@ -6,16 +6,21 @@ class SignalRService {
         this.isConnected = false;
         this.connectionPromise = null;
         this.listeners = new Map();
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 10;
+        this.currentRoomId = null; // Track current room
     }
 
     async startConnection(token) {
-        // If already connected, return
+        // If already connected and healthy, return
         if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
             console.log('SignalR already connected');
             return;
         }
 
+        // If connection is in progress, wait for it
         if (this.connectionPromise) {
+            console.log('Connection already in progress, waiting...');
             return this.connectionPromise;
         }
 
@@ -23,8 +28,14 @@ class SignalRService {
             try {
                 // Stop existing connection if any
                 if (this.connection) {
-                    await this.connection.stop();
+                    try {
+                        await this.connection.stop();
+                    } catch (e) {
+                        console.log('Error stopping old connection:', e);
+                    }
                 }
+
+                console.log('Creating new SignalR connection...');
 
                 this.connection = new signalR.HubConnectionBuilder()
                     .withUrl('http://localhost:5216/gameHub', {
@@ -34,9 +45,10 @@ class SignalRService {
                     })
                     .withAutomaticReconnect({
                         nextRetryDelayInMilliseconds: retryContext => {
+                            // Exponential backoff with max delay
                             if (retryContext.elapsedMilliseconds < 10000) {
-                                return 2000;
-                            } else if (retryContext.elapsedMilliseconds < 30000) {
+                                return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 5000);
+                            } else if (retryContext.elapsedMilliseconds < 60000) {
                                 return 5000;
                             } else {
                                 return 10000;
@@ -52,23 +64,51 @@ class SignalRService {
                 this.connection.onreconnecting((error) => {
                     console.log('SignalR reconnecting:', error);
                     this.isConnected = false;
+                    this.reconnectAttempts++;
                 });
 
-                this.connection.onreconnected((connectionId) => {
+                this.connection.onreconnected(async (connectionId) => {
                     console.log('SignalR reconnected:', connectionId);
                     this.isConnected = true;
+                    this.reconnectAttempts = 0;
+
+                    // Auto-rejoin current room if we have one
+                    if (this.currentRoomId) {
+                        console.log('Auto-rejoining room after reconnection:', this.currentRoomId);
+                        try {
+                            await this.connection.invoke('JoinGameRoom', this.currentRoomId);
+                            console.log('Successfully rejoined room:', this.currentRoomId);
+                        } catch (error) {
+                            console.error('Failed to rejoin room after reconnection:', error);
+                        }
+                    }
                 });
 
                 this.connection.onclose((error) => {
                     console.log('SignalR connection closed:', error);
                     this.isConnected = false;
                     this.connectionPromise = null;
+
+                    // Only attempt to reconnect if we haven't exceeded max attempts
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        console.log(`Will attempt to reconnect (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+                        setTimeout(() => {
+                            const token = localStorage.getItem('token');
+                            if (token) {
+                                this.startConnection(token).catch(e => {
+                                    console.error('Reconnection failed:', e);
+                                });
+                            }
+                        }, 2000);
+                    }
                 });
 
                 // Start the connection
+                console.log('Starting SignalR connection...');
                 await this.connection.start();
                 this.isConnected = true;
-                console.log('SignalR Connected successfully, connection state:', this.connection.state);
+                this.reconnectAttempts = 0;
+                console.log('SignalR Connected successfully, connection ID:', this.connection.connectionId);
 
                 resolve();
             } catch (error) {
@@ -82,8 +122,6 @@ class SignalRService {
         return this.connectionPromise;
     }
 
-
-
     attachStoredListeners() {
         if (!this.connection) return;
 
@@ -95,10 +133,10 @@ class SignalRService {
         }
     }
 
-
     async stopConnection() {
         if (this.connection) {
             try {
+                this.currentRoomId = null; // Clear current room
                 await this.connection.stop();
                 this.isConnected = false;
                 this.connectionPromise = null;
@@ -111,8 +149,14 @@ class SignalRService {
 
     async joinGameRoom(roomId) {
         // Wait for connection to be established
-        if (!this.connection || !this.isConnected) {
-            throw new Error('SignalR connection not established. Call startConnection first.');
+        if (!this.connection) {
+            throw new Error('SignalR connection not initialized. Call startConnection first.');
+        }
+
+        // If not connected, wait for connection
+        if (!this.isConnected && this.connectionPromise) {
+            console.log('Waiting for connection to establish before joining room...');
+            await this.connectionPromise;
         }
 
         // Check connection state
@@ -121,8 +165,10 @@ class SignalRService {
         }
 
         try {
+            console.log(`Joining game room: ${roomId}`);
             await this.connection.invoke('JoinGameRoom', roomId);
-            console.log(`Joined game room: ${roomId}`);
+            this.currentRoomId = roomId; // Track current room
+            console.log(`Successfully joined game room: ${roomId}`);
         } catch (error) {
             console.error('Error joining game room:', error);
             throw error;
@@ -132,18 +178,22 @@ class SignalRService {
     async leaveGameRoom(roomId) {
         if (!this.connection || !this.isConnected) {
             console.log('Cannot leave room - not connected');
+            this.currentRoomId = null;
             return;
         }
 
         try {
             await this.connection.invoke('LeaveGameRoom', roomId);
             console.log(`Left game room: ${roomId}`);
+            if (this.currentRoomId === roomId) {
+                this.currentRoomId = null;
+            }
         } catch (error) {
             console.error('Error leaving game room:', error);
         }
     }
 
-    // Event listener management (keep your existing methods)
+    // Event listener management
     onPlayerJoined(callback) {
         this.registerListener('PlayerJoined', callback);
     }
@@ -176,11 +226,9 @@ class SignalRService {
         this.registerListener('GameStartFailed', callback);
     }
 
-
     onGameReset(callback) {
         this.registerListener('GameReset', callback);
     }
-
 
     // Voting-related listeners
     onCategoryVotingStarted(callback) {
@@ -194,7 +242,6 @@ class SignalRService {
     onCategoryVotingFinished(callback) {
         this.registerListener('CategoryVotingFinished', callback);
     }
-
 
     onCategoryRevoteStarted(callback) {
         this.registerListener('CategoryRevoteStarted', callback);
@@ -211,8 +258,6 @@ class SignalRService {
     offGameStateSync(handler) {
         this.removeListener("GameStateSync", handler);
     }
-    // Generic listener registration
-
 
     registerListener(eventName, callback) {
         if (!this.listeners.has(eventName)) {
@@ -231,10 +276,6 @@ class SignalRService {
             console.log(`Stored listener for later (no connection yet): ${eventName}`);
         }
     }
-
-
-
-    // Remove a specific listener
 
     removeListener(eventName, callback) {
         if (!this.connection) {
@@ -274,8 +315,6 @@ class SignalRService {
         }
     }
 
-
-    // Remove all listeners for an event
     removeAllListeners(eventName) {
         if (!this.connection) {
             return;
@@ -312,6 +351,7 @@ class SignalRService {
         }
     }
 
+
     async submitAnswer(roomId, questionId, selectedAnswers) {
         if (!this.connection || !this.isConnected) {
             throw new Error('SignalR connection not established');
@@ -324,6 +364,7 @@ class SignalRService {
             throw error;
         }
     }
+
 
     async nextQuestion(roomId) {
         if (!this.connection || !this.isConnected) {
@@ -358,19 +399,26 @@ class SignalRService {
         return signalR.HubConnectionState[this.connection.state];
     }
 
-    // New method to wait for connection
-    async waitForConnection() {
-        if (this.isConnected) {
-            return;
+    async waitForConnection(maxWaitMs = 10000) {
+        const startTime = Date.now();
+
+        while (!this.isConnected && (Date.now() - startTime) < maxWaitMs) {
+            if (this.connectionPromise) {
+                try {
+                    await this.connectionPromise;
+                    return;
+                } catch (e) {
+                    console.error('Connection failed while waiting:', e);
+                    throw e;
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        if (this.connectionPromise) {
-            await this.connectionPromise;
-        } else {
-            throw new Error('Connection not started');
+        if (!this.isConnected) {
+            throw new Error('Connection timeout');
         }
     }
-
 
     async startCategoryVoting(roomId, categories) {
         if (!this.connection || !this.isConnected) {
@@ -413,8 +461,6 @@ class SignalRService {
             throw error;
         }
     }
-
-
 }
 
 const signalRService = new SignalRService();

@@ -135,7 +135,13 @@ public class GameService : IGameService
                 CorrectAnswerIndexes = q.CorrectAnswerIndexes,
                 Category = q.Category,
                 Difficulty = q.Difficulty
-            }).ToList()
+            }).ToList(),
+            PlayerAnswers = game.PlayerAnswers.Select(pa => new PlayerAnswerDto
+            {
+                PlayerId = pa.PlayerId,
+                QuestionId = pa.QuestionId,
+                SelectedAnswerIndexes = pa.SelectedAnswerIndexes
+            }).ToList(),
         };
     }
 

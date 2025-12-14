@@ -131,7 +131,8 @@ namespace live_trivia.Hubs
             }
         }
 
-        public async Task SubmitAnswer(string roomId, int questionId, List<int> selectedAnswers)
+
+        public async Task SubmitAnswer(string roomId, int questionId, List<int> selectedAnswers, int timeLeft = 0)
         {
             try
             {
@@ -144,27 +145,58 @@ namespace live_trivia.Hubs
                     return;
                 }
 
-                Console.WriteLine($"Player {playerName} (ID: {playerId}) submitted answer for question {questionId}");
 
-                // Store the answer and notify others
-                var game = await _gameService.GetGameAsync(roomId);
-                if (game != null)
+                var game = await _gamesRepository.GetGameAsync(
+                    roomId,
+                    includePlayers: true,
+                    includeQuestions: true,
+                    includeAnswers: true
+                );
+
+                if (game == null) return;
+
+                // upsert (prevents double-submit duplicates)
+                var existing = game.PlayerAnswers.FirstOrDefault(a =>
+                    a.GameRoomId == roomId &&
+                    a.PlayerId == playerId &&
+                    a.QuestionId == questionId);
+
+                if (existing == null)
                 {
-                    await Clients.Group(roomId).SendAsync("AnswerSubmitted", new
+                    game.PlayerAnswers.Add(new PlayerAnswer
                     {
+                        GameRoomId = roomId,
                         PlayerId = playerId,
-                        PlayerName = playerName,
-                        ConnectionId = Context.ConnectionId,
                         QuestionId = questionId,
-                        Timestamp = DateTime.UtcNow
+                        SelectedAnswerIndexes = selectedAnswers,
+                        TimeLeft = timeLeft,
+                        AnsweredAt = DateTime.UtcNow
                     });
                 }
+                else
+                {
+                    existing.SelectedAnswerIndexes = selectedAnswers;
+                    existing.TimeLeft = timeLeft;
+                    existing.AnsweredAt = DateTime.UtcNow;
+                }
+
+                await _gameService.SaveChangesAsync();
+
+                await Clients.Group(roomId).SendAsync("AnswerSubmitted", new
+                {
+                    PlayerId = playerId,
+                    PlayerName = playerName,
+                    ConnectionId = Context.ConnectionId,
+                    QuestionId = questionId,
+                    Timestamp = DateTime.UtcNow
+                });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in SubmitAnswer: {ex.Message}");
             }
         }
+
 
         public async Task NextQuestion(string roomId)
         {

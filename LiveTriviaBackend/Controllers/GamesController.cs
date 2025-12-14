@@ -184,6 +184,8 @@ namespace live_trivia.Controllers
                 return Unauthorized("Player identity not found in token.");
             }
 
+            var playerName = User.Identity?.Name ?? "Unknown";
+
             var game = await _gameService.GetGameAsync(roomId);
             if (game == null)
                 return NotFound("Game not found");
@@ -196,21 +198,44 @@ namespace live_trivia.Controllers
             if (question == null)
                 return NotFound("Question not found in this game");
 
-            var playerAnswer = new PlayerAnswer
-            {
-                PlayerId = player.Id,
-                QuestionId = question.Id,
-                GameRoomId = roomId,
-                SelectedAnswerIndexes = request.SelectedAnswerIndexes,
-                AnsweredAt = DateTime.UtcNow,
-                TimeLeft = request.TimeLeft
-            };
+            // Check if answer already exists (upsert logic)
+            var existingAnswer = game.PlayerAnswers.FirstOrDefault(pa =>
+                pa.GameRoomId == roomId &&
+                pa.PlayerId == playerId &&
+                pa.QuestionId == request.QuestionId);
 
-            game.PlayerAnswers.Add(playerAnswer);
+            if (existingAnswer == null)
+            {
+                var playerAnswer = new PlayerAnswer
+                {
+                    PlayerId = player.Id,
+                    QuestionId = question.Id,
+                    GameRoomId = roomId,
+                    SelectedAnswerIndexes = request.SelectedAnswerIndexes,
+                    AnsweredAt = DateTime.UtcNow,
+                    TimeLeft = request.TimeLeft
+                };
+
+                game.PlayerAnswers.Add(playerAnswer);
+            }
+            else
+            {
+                existingAnswer.SelectedAnswerIndexes = request.SelectedAnswerIndexes;
+                existingAnswer.TimeLeft = request.TimeLeft;
+                existingAnswer.AnsweredAt = DateTime.UtcNow;
+            }
 
             await _gameService.SaveChangesAsync();
 
-            return Ok(playerAnswer);
+            await _hubContext.Clients.Group(roomId).SendAsync("AnswerSubmitted", new
+            {
+                PlayerId = playerId,
+                PlayerName = playerName,
+                QuestionId = request.QuestionId,
+                Timestamp = DateTime.UtcNow
+            });
+
+            return Ok(new { message = "Answer submitted successfully" });
         }
 
         [HttpGet("{roomId}/settings")]
