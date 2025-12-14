@@ -9,6 +9,8 @@ using live_trivia.Dtos;
 using live_trivia.Interfaces;
 using live_trivia;
 using System.Security.Claims;
+using System.Linq; // Added for First() in GenerateJwtToken_ShouldIncludeClaims
+using live_trivia.Exceptions; // ADDED THIS USING for the specific exception
 
 public class AuthServiceTests
 {
@@ -89,7 +91,9 @@ public class AuthServiceTests
             Password = "newpass"
         };
 
-        await Assert.ThrowsAsync<Exception>(async () =>
+        // FIX APPLIED HERE:
+        // Changed Assert.ThrowsAsync<Exception> to Assert.ThrowsAsync<UsernameAlreadyExistsException>
+        await Assert.ThrowsAsync<UsernameAlreadyExistsException>(async () =>
         {
             await authService.RegisterAsync(request);
         });

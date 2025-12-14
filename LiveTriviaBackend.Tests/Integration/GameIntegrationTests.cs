@@ -9,6 +9,7 @@ using live_trivia.Dtos;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Moq; // <--- ADDED: Needed for mocking
 
 namespace live_trivia.Tests.Integration
 {
@@ -26,8 +27,17 @@ namespace live_trivia.Tests.Integration
             // Repositories
             services.AddScoped<GamesRepository>();
             services.AddScoped<QuestionsRepository>();
+            
+            // 🛑 FIX: Register the missing IActiveGamesService 🛑
+            // Create a mock instance
+            var mockActiveGamesService = new Mock<IActiveGamesService>();
+            
+            // Register the mock instance as a Singleton
+            // Integration tests should not rely on the external state of IActiveGamesService,
+            // so passing a mock object prevents exceptions during GameService construction.
+            services.AddSingleton(mockActiveGamesService.Object);
 
-            // Services via interfaces
+            // Services via interfaces (Now GameService can be constructed)
             services.AddScoped<IGameService, GameService>();
             services.AddScoped<IQuestionService, QuestionService>();
 
@@ -54,44 +64,50 @@ namespace live_trivia.Tests.Integration
         public async Task Can_Create_And_Start_Game()
         {
             var provider = BuildServiceProvider();
-            var context = provider.GetRequiredService<TriviaDbContext>();
-            var gameService = provider.GetRequiredService<IGameService>();
-
-            // Seed questions
-            await SeedQuestionsAsync(context);
-
-            // Create player
-            var player = new Player { Name = "HostPlayer", CreatedAt = System.DateTime.UtcNow };
-            context.Players.Add(player);
-            await context.SaveChangesAsync();
-
-            // Create game
-            var game = await gameService.CreateGameAsync("room1", player);
-            Assert.NotNull(game);
-            Assert.Equal("room1", game.RoomId);
-
-            // Update settings
-            var settingsDto = new GameSettingsDto
+            // Using GetRequiredService within a using block ensures scope is disposed correctly
+            using (var scope = provider.CreateScope())
             {
-                Category = "Geography",
-                Difficulty = "Easy",
-                QuestionCount = 3,
-                TimeLimitSeconds = 15
-            };
-            var settings = await gameService.UpdateGameSettingsAsync("room1", settingsDto);
-            Assert.Equal("Geography", settings.Category);
+                var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
+                var gameService = scope.ServiceProvider.GetRequiredService<IGameService>();
 
-            // Add player to game
-            await gameService.AddExistingPlayerToGameAsync(game, player);
+                // Seed questions
+                await SeedQuestionsAsync(context);
 
-            // Start game
-            var started = await gameService.StartGameAsync("room1");
-            Assert.True(started);
+                // Create player
+                var player = new Player { Name = "HostPlayer", CreatedAt = System.DateTime.UtcNow };
+                context.Players.Add(player);
+                await context.SaveChangesAsync();
 
-            // Verify game details
-            var details = await gameService.GetGameDetailsAsync("room1");
-            Assert.NotNull(details);
-            Assert.Equal(1, details.Players.Count);
+                // Create game
+                var game = await gameService.CreateGameAsync("room1", player);
+                Assert.NotNull(game);
+                Assert.Equal("room1", game.RoomId);
+
+                // Update settings
+                var settingsDto = new GameSettingsDto
+                {
+                    Category = "Geography",
+                    Difficulty = "Easy",
+                    QuestionCount = 3,
+                    TimeLimitSeconds = 15
+                };
+                var settings = await gameService.UpdateGameSettingsAsync("room1", settingsDto);
+                Assert.Equal("Geography", settings.Category);
+
+                // Add player to game
+                // NOTE: When running CreateGameAsync, the player (host) is typically added,
+                // but this line ensures the player is explicitly attached for the StartGame validation.
+                await gameService.AddExistingPlayerToGameAsync(game, player);
+
+                // Start game
+                var started = await gameService.StartGameAsync("room1");
+                Assert.True(started);
+
+                // Verify game details
+                var details = await gameService.GetGameDetailsAsync("room1");
+                Assert.NotNull(details);
+                Assert.Equal(1, details.Players.Count);
+            }
         }
     }
 }

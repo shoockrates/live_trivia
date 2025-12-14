@@ -18,13 +18,25 @@ namespace live_trivia.Tests
     {
         private readonly Mock<IGameService> _mockGameService;
         private readonly Mock<IHubContext<GameHub>> _mockHubContext;
+        // 1. ADD: Mock for the required third dependency
+        private readonly Mock<IActiveGamesService> _mockActiveGamesService; 
+        
         private readonly GamesController _controller;
 
         public GamesControllerTests()
         {
             _mockGameService = new Mock<IGameService>();
             _mockHubContext = new Mock<IHubContext<GameHub>>();
-            _controller = new GamesController(_mockGameService.Object, _mockHubContext.Object);
+            
+            // 2. INITIALIZE the new mock
+            _mockActiveGamesService = new Mock<IActiveGamesService>(); 
+            
+            // 3. FIX: Pass all three required dependencies to the controller constructor
+            _controller = new GamesController(
+                _mockGameService.Object, 
+                _mockHubContext.Object, 
+                _mockActiveGamesService.Object // <--- ADDED MOCK
+            );
 
             // 1. Create mocks
             var mockClients = new Mock<IHubClients>();
