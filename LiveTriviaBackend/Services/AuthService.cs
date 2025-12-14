@@ -72,6 +72,7 @@ public class AuthService : IAuthService
         };
     }
 
+
     private string GenerateJwtToken(User user)
     {
         var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
@@ -81,29 +82,32 @@ public class AuthService : IAuthService
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        // Validate that PlayerId exists
         if (user.PlayerId == null)
-        {
             throw new InvalidOperationException($"User {user.Username} has no associated PlayerId");
+
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim("playerId", user.PlayerId.Value.ToString()),
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+        if (user.IsAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
         }
 
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim("playerId", user.PlayerId.Value.ToString()),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-
         var token = new JwtSecurityToken(
-            jwtIssuer,
-            jwtAudience,
-            claims,
+            issuer: jwtIssuer,
+            audience: jwtAudience,
+            claims: claims,
             expires: DateTime.UtcNow.AddHours(12),
             signingCredentials: credentials
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
 }
 

@@ -1,5 +1,6 @@
 namespace live_trivia.Services;
 using live_trivia.Repositories;
+using live_trivia.Dtos;
 using live_trivia.Interfaces;
 public class QuestionService : IQuestionService
 {
@@ -14,4 +15,8 @@ public class QuestionService : IQuestionService
     public async Task<Question?> GetRandomAsync() => await _questionsRepo.GetRandomAsync();
     public async Task<List<Question>> GetByCategoryAsync(string category) => await _questionsRepo.GetByCategoryAsync(category);
     public async Task<int> LoadFromFileAsync(string filePath) => await _questionsRepo.LoadFromFileAsync(filePath);
+    public Task<List<string>> GetCategoriesAsync() => _questionsRepo.GetCategoriesAsync();
+
+    public Task<QuestionBankImportResultDto> ImportQuestionBankAsync(QuestionBankImportDto dto)
+        => _questionsRepo.ImportQuestionBankAsync(dto);
 }
