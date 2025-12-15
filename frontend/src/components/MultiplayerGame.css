@@ -6,9 +6,23 @@
     padding: 20px;
 }
 
+.multiplayer-game-layout {
+    width: 100%;
+    max-width: 1400px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.multiplayer-main-column {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
 .multiplayer-game-card {
     width: 100%;
-    max-width: 800px;
+    max-width: 900px;
     background: linear-gradient(135deg, rgba(20, 28, 36, 0.4), rgba(10, 14, 19, 0.25));
     border: 1px solid rgba(156, 200, 255, 0.12);
     border-radius: 20px;
@@ -24,7 +38,6 @@
 
 .game-header {
     text-align: center;
-    margin-bottom: 32px;
 }
 
 .game-title {
@@ -68,8 +81,9 @@
     font-family: 'Courier New', monospace;
 }
 
-.players-status {
-    margin-top: 24px;
+.players-sidebar {
+    width: 100%;
+    max-width: 420px;
 }
 
 .players-status h4 {
@@ -83,6 +97,35 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px;
+}
+
+.answer-progress {
+    color: #9cc8ff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.players-status {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: linear-gradient(135deg, rgba(20, 28, 36, 0.5), rgba(10, 14, 19, 0.35));
+    border: 1px solid rgba(156, 200, 255, 0.18);
+    border-radius: 18px;
+    padding: 20px 18px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.players-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(156, 200, 255, 0.25);
+    width: 100%;
 }
 
 .player-status {
@@ -283,10 +326,19 @@
 @media (max-width: 768px) {
     .multiplayer-game-card {
         padding: 24px;
+        max-width: 100%;
     }
 
     .players-grid {
         grid-template-columns: 1fr;
+    }
+
+    .multiplayer-game-layout {
+        gap: 20px;
+    }
+
+    .players-sidebar {
+        max-width: 100%;
     }
 
     .game-title {
@@ -309,4 +361,25 @@
     padding: 4px 12px;
     border-radius: 8px;
     box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+}
+
+@media (min-width: 1100px) {
+    .multiplayer-game-layout {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .multiplayer-main-column {
+        width: 100%;
+        max-width: 900px;
+    }
+
+    .players-sidebar {
+        position: absolute;
+        left: calc(50% + 450px + 12px);
+        top: 0;
+        width: 420px;
+    }
 }
