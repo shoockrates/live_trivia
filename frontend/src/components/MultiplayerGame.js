@@ -598,86 +598,94 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
     return (
         <div className="multiplayer-game-container">
-            <div className="multiplayer-game-card">
-                <div className="game-header">
-                    <h2 className="game-title">Multiplayer Game</h2>
-                    <div className="room-info-section">
-                        <span className="room-code-label">Room Code</span>
-                        <div className="room-code-display">
-                            <span className="room-code">{roomCode}</span>
+            <div className="multiplayer-game-layout">
+                <div className="multiplayer-main-column">
+                    <div className="multiplayer-game-card">
+                        <div className="game-header">
+                            <h2 className="game-title">Multiplayer Game</h2>
+                            <div className="room-info-section">
+                                <span className="room-code-label">Room Code</span>
+                                <div className="room-code-display">
+                                    <span className="room-code">{roomCode}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {currentQuestion ? (
+                            <QuestionDisplay
+                                question={currentQuestion.text}
+                                answers={currentQuestion.answers}
+                                correctIndexes={currentQuestion.correctAnswerIndexes || []}
+                                onAnswerSelect={handleAnswerSelect}
+                                onNext={handleNextQuestion}
+                                onTimerExpire={handleTimerExpire}
+                                currentIndex={currentQuestionIndex}
+                                totalQuestions={totalQuestions}
+                                correctCount={correctAnswerCount}
+                                wrongCount={wrongAnswerCount}
+                                revealed={hasAnswered}
+                                questionIn={true}
+                                isMultiplayer={true}
+                                isHost={isHost}
+                                answeredPlayers={answeredPlayersCount}
+                                totalPlayers={totalPlayersCount}
+                                isLastQuestion={isLastQuestion}
+                                currentScore={currentScore}
+                            />
+                        ) : (
+                            <div className="waiting-for-question">
+                                <div className="loading-spinner"></div>
+                                <p>Waiting for game to start...</p>
+                            </div>
+                        )}
+
+                        <button className="back-button" onClick={handleBackToLobby}>
+                            Leave Game
+                        </button>
+                    </div>
+                </div>
+
+                <aside className="players-sidebar">
+                    <div className="players-status">
+                        <div className="players-meta">
+                            <h4>Players ({totalPlayersCount})</h4>
+                            <div className="answer-progress">
+                                {answeredPlayersCount} / {totalPlayersCount} answered
+                                {isLastQuestion && <span className="last-question-indicator"> • Final Question</span>}
+                            </div>
+                        </div>
+                        <div className="players-grid">
+                            {players.map((player) => {
+                                const playerScore = player.score ?? player.currentScore ?? 0;
+                                const normalizedPlayerId = parseInt(player.playerId ?? player.id, 10);
+                                const hasAnswered = playerAnswers[normalizedPlayerId] === true;
+
+                                return (
+                                    <div key={normalizedPlayerId} className="player-status">
+                                        <div className="player-avatar-small">
+                                            {player.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="player-info">
+                                            <div className="player-name-row">
+                                                <span className="player-name">{player.name}</span>
+                                                {normalizedPlayerId === parseInt(user.playerId) && (
+                                                    <span className="you-badge">You</span>
+                                                )}
+                                            </div>
+                                            <div className="player-score">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                                </svg>
+                                                <span>{playerScore} pts</span>
+                                            </div>
+                                        </div>
+                                        <div className={`status-dot ${hasAnswered ? 'answered' : 'waiting'}`}></div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
-                </div>
-
-                <div className="players-status">
-                    <h4>Players ({totalPlayersCount})</h4>
-                    <div className="players-grid">
-                        {players.map((player) => {
-                            const playerScore = player.score ?? player.currentScore ?? 0;
-                            const normalizedPlayerId = parseInt(player.playerId ?? player.id, 10);
-                            const hasAnswered = playerAnswers[normalizedPlayerId] === true;
-
-                            return (
-                                <div key={normalizedPlayerId} className="player-status">
-                                    <div className="player-avatar-small">
-                                        {player.name?.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="player-info">
-                                        <div className="player-name-row">
-                                            <span className="player-name">{player.name}</span>
-                                            {normalizedPlayerId === parseInt(user.playerId) && (
-                                                <span className="you-badge">You</span>
-                                            )}
-                                        </div>
-                                        <div className="player-score">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                                            </svg>
-                                            <span>{playerScore} pts</span>
-                                        </div>
-                                    </div>
-                                    <div className={`status-dot ${hasAnswered ? 'answered' : 'waiting'}`}></div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <div className="answer-progress">
-                        {answeredPlayersCount} / {totalPlayersCount} answered
-                        {isLastQuestion && <span className="last-question-indicator"> • Final Question</span>}
-                    </div>
-                </div>
-
-                {currentQuestion ? (
-                    <QuestionDisplay
-                        question={currentQuestion.text}
-                        answers={currentQuestion.answers}
-                        correctIndexes={currentQuestion.correctAnswerIndexes || []}
-                        onAnswerSelect={handleAnswerSelect}
-                        onNext={handleNextQuestion}
-                        onTimerExpire={handleTimerExpire}
-                        currentIndex={currentQuestionIndex}
-                        totalQuestions={totalQuestions}
-                        correctCount={correctAnswerCount}
-                        wrongCount={wrongAnswerCount}
-                        revealed={hasAnswered}
-                        questionIn={true}
-                        isMultiplayer={true}
-                        isHost={isHost}
-                        answeredPlayers={answeredPlayersCount}
-                        totalPlayers={totalPlayersCount}
-                        isLastQuestion={isLastQuestion}
-                        currentScore={currentScore}
-                    />
-                ) : (
-                    <div className="waiting-for-question">
-                        <div className="loading-spinner"></div>
-                        <p>Waiting for game to start...</p>
-                    </div>
-                )}
-
-                <button className="back-button" onClick={handleBackToLobby}>
-                    Leave Game
-                </button>
+                </aside>
             </div>
         </div>
     );

@@ -451,3 +451,47 @@
     font-size: 18px;
     font-weight: 500;
 }
+
+/* End game early control – positioned directly under the question card */
+.endgame-early-icon {
+    position: relative;
+    margin: 20px auto 0;
+    transform: none;
+    padding: 10px 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(94, 167, 255, 0.75);
+    background:
+        radial-gradient(circle at 20% 0, rgba(255, 255, 255, 0.16), transparent 60%),
+        linear-gradient(135deg, #6e7bff 0%, #58c3ff 45%, #6ef2ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 1;
+    backdrop-filter: blur(10px);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.22s ease, color 0.18s ease;
+}
+
+
+.endgame-early-icon-x {
+    line-height: 1;
+    font-size: 18px;
+    margin-right: 8px;
+    transform: translateY(-1px);
+}
+
+.endgame-early-icon-label {
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+    .endgame-early-icon {
+        padding: 9px 18px;
+        font-size: 14px;
+    }
+}

@@ -215,7 +215,7 @@ var assemblies = [
     "classes": [
       { "name": "live_trivia.BaseEntity", "rp": "LiveTriviaBackend_BaseEntity.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 8, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.CategoryStatistics", "rp": "LiveTriviaBackend_CategoryStatistics.html", "cl": 7, "ucl": 1, "cal": 8, "tl": 15, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "live_trivia.Controllers.AuthController", "rp": "LiveTriviaBackend_AuthController.html", "cl": 0, "ucl": 23, "cal": 23, "tl": 50, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "live_trivia.Controllers.AuthController", "rp": "LiveTriviaBackend_AuthController.html", "cl": 23, "ucl": 0, "cal": 23, "tl": 50, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Controllers.GamesController", "rp": "LiveTriviaBackend_GamesController.html", "cl": 159, "ucl": 3, "cal": 162, "tl": 283, "cb": 54, "tb": 56, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Controllers.LeaderboardController", "rp": "LiveTriviaBackend_LeaderboardController.html", "cl": 39, "ucl": 0, "cal": 39, "tl": 74, "cb": 10, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Controllers.StatisticsController", "rp": "LiveTriviaBackend_StatisticsController.html", "cl": 26, "ucl": 0, "cal": 26, "tl": 53, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -245,15 +245,16 @@ var assemblies = [
       { "name": "live_trivia.Game", "rp": "LiveTriviaBackend_Game.html", "cl": 114, "ucl": 0, "cal": 114, "tl": 173, "cb": 34, "tb": 40, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.GamePlayer", "rp": "LiveTriviaBackend_GamePlayer.html", "cl": 5, "ucl": 1, "cal": 6, "tl": 17, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.GameSettings", "rp": "LiveTriviaBackend_GameSettings.html", "cl": 6, "ucl": 1, "cal": 7, "tl": 13, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "live_trivia.Player", "rp": "LiveTriviaBackend_Player.html", "cl": 9, "ucl": 22, "cal": 31, "tl": 45, "cb": 0, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "live_trivia.Hubs.GameHub", "rp": "LiveTriviaBackend_GameHub.html", "cl": 207, "ucl": 160, "cal": 367, "tl": 515, "cb": 58, "tb": 138, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "live_trivia.Player", "rp": "LiveTriviaBackend_Player.html", "cl": 28, "ucl": 3, "cal": 31, "tl": 45, "cb": 2, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.PlayerAnswer", "rp": "LiveTriviaBackend_PlayerAnswer.html", "cl": 11, "ucl": 1, "cal": 12, "tl": 19, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.PlayerStatistics", "rp": "LiveTriviaBackend_PlayerStatistics.html", "cl": 10, "ucl": 2, "cal": 12, "tl": 24, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Question", "rp": "LiveTriviaBackend_Question.html", "cl": 21, "ucl": 7, "cal": 28, "tl": 42, "cb": 7, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.QuestionBank", "rp": "LiveTriviaBackend_QuestionBank.html", "cl": 51, "ucl": 0, "cal": 51, "tl": 84, "cb": 13, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Repositories.GamesRepository", "rp": "LiveTriviaBackend_GamesRepository.html", "cl": 48, "ucl": 4, "cal": 52, "tl": 92, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Repositories.QuestionsRepository", "rp": "LiveTriviaBackend_QuestionsRepository.html", "cl": 55, "ucl": 3, "cal": 58, "tl": 100, "cb": 10, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "live_trivia.ScoreSummary", "rp": "LiveTriviaBackend_ScoreSummary.html", "cl": 0, "ucl": 7, "cal": 7, "tl": 15, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "live_trivia.Services.ActiveGamesService", "rp": "LiveTriviaBackend_ActiveGamesService.html", "cl": 0, "ucl": 13, "cal": 13, "tl": 30, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "live_trivia.ScoreSummary", "rp": "LiveTriviaBackend_ScoreSummary.html", "cl": 6, "ucl": 1, "cal": 7, "tl": 15, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "live_trivia.Services.ActiveGamesService", "rp": "LiveTriviaBackend_ActiveGamesService.html", "cl": 13, "ucl": 0, "cal": 13, "tl": 30, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Services.AuthService", "rp": "LiveTriviaBackend_AuthService.html", "cl": 64, "ucl": 2, "cal": 66, "tl": 109, "cb": 10, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Services.GameService", "rp": "LiveTriviaBackend_GameService.html", "cl": 207, "ucl": 24, "cal": 231, "tl": 334, "cb": 58, "tb": 70, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "live_trivia.Services.LeaderboardService", "rp": "LiveTriviaBackend_LeaderboardService.html", "cl": 56, "ucl": 0, "cal": 56, "tl": 77, "cb": 1, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -275,6 +276,36 @@ var riskHotspotMetrics = [
 ];
 
 var riskHotspots = [
+  {
+    "assembly": "LiveTriviaBackend", "class": "live_trivia.Hubs.GameHub", "reportPath": "LiveTriviaBackend_GameHub.html", "methodName": "NextQuestion()", "methodShortName": "NextQuestion()", "fileIndex": 0, "line": 189,
+    "metrics": [
+      { "value": 156, "exceeded": true },
+      { "value": 12, "exceeded": false },
+    ]},
+  {
+    "assembly": "LiveTriviaBackend", "class": "live_trivia.Hubs.GameHub", "reportPath": "LiveTriviaBackend_GameHub.html", "methodName": "SubmitAnswer()", "methodShortName": "SubmitAnswer()", "fileIndex": 0, "line": 154,
+    "metrics": [
+      { "value": 156, "exceeded": true },
+      { "value": 12, "exceeded": false },
+    ]},
+  {
+    "assembly": "LiveTriviaBackend", "class": "live_trivia.Hubs.GameHub", "reportPath": "LiveTriviaBackend_GameHub.html", "methodName": "LeaveGameRoom()", "methodShortName": "LeaveGameRoom()", "fileIndex": 0, "line": 72,
+    "metrics": [
+      { "value": 110, "exceeded": true },
+      { "value": 10, "exceeded": false },
+    ]},
+  {
+    "assembly": "LiveTriviaBackend", "class": "live_trivia.Hubs.GameHub", "reportPath": "LiveTriviaBackend_GameHub.html", "methodName": "<EndCategoryVoting()", "methodShortName": "<EndCategoryVoting()", "fileIndex": 0, "line": 446,
+    "metrics": [
+      { "value": 72, "exceeded": true },
+      { "value": 8, "exceeded": false },
+    ]},
+  {
+    "assembly": "LiveTriviaBackend", "class": "live_trivia.Hubs.GameHub", "reportPath": "LiveTriviaBackend_GameHub.html", "methodName": "EndCategoryVoting()", "methodShortName": "EndCategoryVoting()", "fileIndex": 0, "line": 358,
+    "metrics": [
+      { "value": 45, "exceeded": true },
+      { "value": 32, "exceeded": true },
+    ]},
   {
     "assembly": "LiveTriviaBackend", "class": "live_trivia.Services.GameService", "reportPath": "LiveTriviaBackend_GameService.html", "methodName": "StartGameAsync()", "methodShortName": "StartGameAsync()", "fileIndex": 0, "line": 22,
     "metrics": [
