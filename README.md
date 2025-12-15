@@ -4,7 +4,7 @@
 
 ## Planned features
 
-- [ ] 1. Import / Export Questions
+- [x] 1. Import / Export Questions (Admin only)
 
 - Hosts can import questions from CSV/JSON files.
 
@@ -12,7 +12,7 @@
 
 - Supports reusing and sharing trivia sets.
 
-- [ ] 2. Leaderboard / Point System
+- [x] 2. Leaderboard / Point System
 
 - Live leaderboard updates after each question.
 - Points awarded for correct answers, with optional bonus for speed.
@@ -61,7 +61,7 @@
 - Questions tagged as Easy, Medium, Hard.
 - Higher difficulty = higher point rewards.
 
-- [ ] 11. Review / Statistics
+- [x] 11. Review / Statistics
 
 - After each game, players can review:
   - All questions with correct answers.
