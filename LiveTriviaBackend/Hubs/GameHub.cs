@@ -8,7 +8,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace live_trivia.Hubs
 {
-    [ExcludeFromCodeCoverage]
     [Authorize]
     public class GameHub : Hub
     {
