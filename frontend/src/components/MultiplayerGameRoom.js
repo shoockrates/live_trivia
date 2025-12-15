@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './MultiplayerGameRoom.css';
 import signalRService from '../services/signalRService';
 
-const API_BASE = 'http://localhost:5216';
+const API_BASE = '/api';
 
 const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
     const [players, setPlayers] = useState([]);

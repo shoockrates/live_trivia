@@ -151,7 +151,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                 const score = currentPlayerData?.score ?? 0;
                 const category = gameState.settings?.category || allQuestions[0]?.category || 'General';
 
-                await fetch('http://localhost:5216/statistics/update', {
+                await fetch('/api/statistics/update', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             if (gameFinished) return;
 
             try {
-                const response = await fetch(`http://localhost:5216/games/${roomCode}`, {
+                const response = await fetch(`/api/games/${roomCode}`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
                 if (response.ok) {
@@ -203,7 +203,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
     const loadInitialGameState = async () => {
         try {
-            const response = await fetch(`http://localhost:5216/games/${roomCode}`, {
+            const response = await fetch(`/api/games/${roomCode}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             if (response.ok) {
@@ -252,7 +252,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
         const syncAnswerStatus = async () => {
             try {
-                const response = await fetch(`http://localhost:5216/games/${roomCode}`, {
+                const response = await fetch(`/api/games/${roomCode}`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
 
@@ -335,7 +335,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     const rawId = data.PlayerId ?? data.playerId ?? data.playerid;
                     const playerId = parseInt(rawId, 10);
 
-                    console.log('🔔 AnswerSubmitted SignalR event received:', {
+                    console.log('AnswerSubmitted SignalR event received:', {
                         raw: data,
                         playerId: playerId
                     });
@@ -350,7 +350,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                             ...prev,
                             [playerId]: true
                         };
-                        console.log('📝 Updated playerAnswers after SignalR:', updated);
+                        console.log('Updated playerAnswers after SignalR:', updated);
                         return updated;
                     });
                 };
@@ -360,7 +360,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     console.log('GameFinished event received. Fetching full game details...');
 
                     try {
-                        const response = await fetch(`http://localhost:5216/games/${roomCode}`, {
+                        const response = await fetch(`/api/games/${roomCode}`, {
                             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                         });
 
@@ -482,7 +482,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             });
 
             // Submit to REST API (backend will broadcast via SignalR)
-            await fetch(`http://localhost:5216/games/${roomCode}/answer`, {
+            await fetch(`/api/games/${roomCode}/answer`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -514,7 +514,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
         try {
             console.log('Host advancing to next question');
-            await fetch(`http://localhost:5216/games/${roomCode}/next`, {
+            await fetch(`/api/games/${roomCode}/next`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
@@ -548,7 +548,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
             const questionId = currentQuestion.id || allQuestions[gameState.currentQuestionIndex]?.id;
             try {
-                await fetch(`http://localhost:5216/games/${roomCode}/answer`, {
+                await fetch(`/api/games/${roomCode}/answer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

@@ -30,7 +30,7 @@ const MultiplayerResults = ({
         console.log('MultiplayerResults: SignalR connection state:', connectionState);
 
         try {
-            const response = await fetch(`http://localhost:5216/games/${roomCode}/reset`, {
+            const response = await fetch(`/api/games/${roomCode}/reset`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

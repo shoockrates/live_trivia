@@ -51,7 +51,7 @@ const MultiplayerLobby = ({ onBack, onCreateGame, onJoinGame, user }) => {
 
             console.log('Creating game room:', newRoomCode);
 
-            const response = await fetch(`http://localhost:5216/games/${newRoomCode}`, {
+            const response = await fetch(`/api/games/${newRoomCode}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ const MultiplayerLobby = ({ onBack, onCreateGame, onJoinGame, user }) => {
 
             console.log('Joining game room:', roomCode.toUpperCase());
 
-            const response = await fetch(`http://localhost:5216/games/${roomCode.toUpperCase()}/join`, {
+            const response = await fetch(`/api/games/${roomCode.toUpperCase()}/join`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

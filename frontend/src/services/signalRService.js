@@ -38,7 +38,7 @@ class SignalRService {
                 console.log('Creating new SignalR connection...');
 
                 this.connection = new signalR.HubConnectionBuilder()
-                    .withUrl('http://localhost:5216/gameHub', {
+                    .withUrl('api/gameHub', {
                         accessTokenFactory: () => token,
                         skipNegotiation: false,
                         transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling

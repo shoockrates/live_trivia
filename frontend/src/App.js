@@ -53,7 +53,7 @@ function App() {
     const [showProfile, setShowProfile] = useState(false);
 
     // Backend base URL
-    const API_BASE = useMemo(() => 'http://localhost:5216', []);
+    const API_BASE = useMemo(() => '/api', []);
 
     // Check if user is already logged in on app start
     useEffect(() => {
