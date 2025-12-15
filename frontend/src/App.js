@@ -637,11 +637,13 @@ function App() {
     };
     const submitAnswersBtn = showSubmitButton ? (
         <button
-            className="next-button endgame-early"
-            style={{ background: 'linear-gradient(135deg, #e74c3c, #6e7bff)', marginTop: 20 }}
+            className="endgame-early-icon"
             onClick={handleEarlyFinish}
+            aria-label="End game early"
+            title="End game early"
         >
-            Submit Answers
+            <span className="endgame-early-icon-x">×</span>
+            <span className="endgame-early-icon-label">End Game</span>
         </button>
     ) : null;
 
