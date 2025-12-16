@@ -163,7 +163,7 @@ const Leaderboard = ({ onBack }) => {
                                 <div className="score-section">
                                     <div className="score-value">{player.totalScore?.toLocaleString() || 0}</div>
                                     <div className="score-label">total points</div>
-                                    <div className="best-score">Best: {player.bestScore}%</div>
+                                    <div className="best-score">Best: {player.bestScore}</div>
                                 </div>
                             </div>
                         ))

@@ -26,26 +26,28 @@ const QuestionDisplay = ({
     const [selectedAnswers, setSelectedAnswers] = useState([]);
     const [isAnswered, setIsAnswered] = useState(false);
     const [timeLeft, setTimeLeft] = useState(30);
-    const timerExpiredRef = useRef(false); // Track if timer already expired
+    const timerExpiredRef = useRef(false);
 
     const isMultiChoice = correctIndexes.length > 1;
+
+    // Check if all players have answered
+    const allPlayersAnswered = isMultiplayer && answeredPlayers >= totalPlayers;
 
     // Reset state when question changes
     useEffect(() => {
         setSelectedAnswers([]);
         setIsAnswered(false);
         setTimeLeft(30);
-        timerExpiredRef.current = false; // Reset timer flag
+        timerExpiredRef.current = false;
     }, [currentIndex]);
 
-    // FIXED: Timer logic - prevent double triggering
+    // Timer logic - prevent double triggering
     useEffect(() => {
         if (isAnswered || timeLeft <= 0 || timerExpiredRef.current) return;
 
         const timer = setTimeout(() => {
             setTimeLeft(prev => {
                 if (prev <= 1) {
-                    // Mark that timer has expired to prevent double triggering
                     if (!timerExpiredRef.current) {
                         timerExpiredRef.current = true;
 
@@ -90,7 +92,6 @@ const QuestionDisplay = ({
     };
 
     const handleSubmit = () => {
-        // Prevent double submission
         if (isAnswered) {
             console.log('Already answered, skipping submit');
             return;
@@ -101,7 +102,7 @@ const QuestionDisplay = ({
 
         const finalAnswer = selectedAnswers.length > 0
             ? [...selectedAnswers].sort((a, b) => a - b)
-            : []; // Empty array = wrong answer
+            : [];
 
         onAnswerSelect(finalAnswer, timeLeft);
     };
@@ -214,7 +215,7 @@ const QuestionDisplay = ({
                         )}
                     </div>
 
-                    {/* HOST: Next Question */}
+                    {/* HOST: Next Question - ONLY enabled when all players answered */}
                     {isMultiplayer && isHost && (
                         <>
                             {/* Submit Answer Button */}
@@ -228,10 +229,18 @@ const QuestionDisplay = ({
                                 </button>
                             )}
 
-                            {/* Next Question Button */}
+                            {/* Next Question Button - DISABLED until all players answer */}
                             {isAnswered && (
-                                <button className="next-button host-next-button" onClick={onNext}>
-                                    {isLastQuestion ? 'Finish Quiz' : `Next Question (${answeredPlayers}/${totalPlayers})`}
+                                <button
+                                    className="next-button host-next-button"
+                                    onClick={onNext}
+                                    disabled={!allPlayersAnswered}
+                                    title={!allPlayersAnswered ? `Waiting for ${totalPlayers - answeredPlayers} more player(s)` : ''}
+                                >
+                                    {isLastQuestion
+                                        ? `Finish Quiz (${answeredPlayers}/${totalPlayers})`
+                                        : `Next Question (${answeredPlayers}/${totalPlayers})`
+                                    }
                                 </button>
                             )}
                         </>

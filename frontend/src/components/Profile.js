@@ -120,14 +120,14 @@ const Profile = ({ user, onBack }) => {
                     <div className="stat-box">
                         <div className="stat-icon">⭐</div>
                         <div className="stat-content">
-                            <div className="stat-value">{stats?.bestScore || 0}%</div>
+                            <div className="stat-value">{stats?.bestScore || 0}</div>
                             <div className="stat-label">Best Score</div>
                         </div>
                     </div>
                     <div className="stat-box">
                         <div className="stat-icon">📊</div>
                         <div className="stat-content">
-                            <div className="stat-value">{stats?.averageScore?.toFixed(1) || 0}%</div>
+                            <div className="stat-value">{stats?.averageScore?.toFixed(1) || 0}</div>
                             <div className="stat-label">Avg Score</div>
                         </div>
                     </div>

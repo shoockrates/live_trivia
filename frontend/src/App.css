@@ -8,7 +8,7 @@
     text-align: center;
     font-synthesis-weight: none;
     position: relative;
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .App::before {
@@ -18,7 +18,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
+    background:
         radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
@@ -41,8 +41,8 @@
     border: 1px solid rgba(156, 200, 255, 0.12);
     border-radius: 20px;
     padding: 32px 28px 24px;
-    box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.06), 
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
         0 12px 40px rgba(0, 0, 0, 0.3),
         0 4px 16px rgba(156, 200, 255, 0.05);
     backdrop-filter: blur(12px) saturate(120%);
@@ -53,8 +53,8 @@
 
 .HeroCard:hover {
     transform: translateY(-2px);
-    box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.08), 
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
         0 16px 48px rgba(0, 0, 0, 0.4),
         0 6px 20px rgba(156, 200, 255, 0.08);
 }
@@ -349,26 +349,26 @@
     .TriviaContainer {
         padding: 12px;
     }
-    
+
     .HeroCard {
         padding: 24px 20px 20px;
     }
-    
+
     .ButtonsGrid {
         grid-template-columns: 1fr;
         gap: 10px;
     }
-    
+
     .TriviaButton {
         padding: 14px 20px;
         font-size: 16px;
     }
-    
+
     .AnswersGrid {
         grid-template-columns: 1fr;
         gap: 12px;
     }
-    
+
     .QuestionCard {
         padding: 20px;
     }
@@ -378,11 +378,11 @@
     .HeroTitle {
         font-size: 28px;
     }
-    
+
     .CategoryTitle {
         font-size: 24px;
     }
-    
+
     .TriviaButton {
         padding: 12px 16px;
         font-size: 14px;
@@ -401,8 +401,13 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Enhanced focus states for accessibility */

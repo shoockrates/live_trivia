@@ -32,6 +32,8 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         };
     }, []);
 
+
+
     // Calculate stats for ALL players from server data
     const calculateAllPlayerStats = useCallback((gameDetails) => {
         console.log('calculateAllPlayerStats called');
@@ -102,50 +104,54 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         return stats;
     }, []);
 
-    const handleGameFinished = useCallback((finalData) => {
+    const handleGameFinished = useCallback(async (finalData) => {
         if (!mounted.current) return;
-        if (statsUpdatedRef.current) return;
+        if (statsUpdatedRef.current) {
+            console.log('Stats already updated, skipping duplicate GameFinished handler');
+            return;
+        }
 
-        console.log('handleGameFinished called');
+        console.log('handleGameFinished called with data:', finalData);
 
-        const rawPlayers = finalData.leaderboard || finalData.players || [];
-
-        // Calculate stats from server data
-        const stats = calculateAllPlayerStats(finalData);
-
-        const leaderboard = rawPlayers.map(player => {
-            const playerId = parseInt(player.playerId ?? player.id);
-            const playerStats = stats[playerId] || { correct: 0, wrong: 0 };
-
-            console.log(`Player ${playerId} (${player.name}) final stats:`, playerStats);
-
-            return {
-                playerId: playerId,
-                name: player.name,
-                score: player.score ?? player.currentScore ?? 0,
-                correct: playerStats.correct,
-                wrong: playerStats.wrong,
-            };
-        }).sort((a, b) => b.score - a.score);
-
-        const myPlayerId = parseInt(user.playerId);
-        const myStats = stats[myPlayerId] || { correct: 0, wrong: 0 };
-        const totalQuestions = myStats.correct + myStats.wrong || finalData.totalQuestions || allQuestions.length;
-
-        console.log('My final stats:', myStats, 'Total questions:', totalQuestions);
-
-        const processedResults = {
-            players: leaderboard,
-            leaderboard,
-            correctCount: myStats.correct,
-            wrongCount: myStats.wrong,
-            totalQuestions
-        };
-
+        // Mark as processing immediately to prevent duplicate handling
         statsUpdatedRef.current = true;
 
-        // Update backend statistics
-        (async () => {
+        try {
+            const rawPlayers = finalData.leaderboard || finalData.players || [];
+
+            // Calculate stats from server data
+            const stats = calculateAllPlayerStats(finalData);
+
+            const leaderboard = rawPlayers.map(player => {
+                const playerId = parseInt(player.playerId ?? player.id);
+                const playerStats = stats[playerId] || { correct: 0, wrong: 0 };
+
+                console.log(`Player ${playerId} (${player.name}) final stats:`, playerStats);
+
+                return {
+                    playerId: playerId,
+                    name: player.name,
+                    score: player.score ?? player.currentScore ?? 0,
+                    correct: playerStats.correct,
+                    wrong: playerStats.wrong,
+                };
+            }).sort((a, b) => b.score - a.score);
+
+            const myPlayerId = parseInt(user.playerId);
+            const myStats = stats[myPlayerId] || { correct: 0, wrong: 0 };
+            const totalQuestions = myStats.correct + myStats.wrong || finalData.totalQuestions || allQuestions.length;
+
+            console.log('My final stats:', myStats, 'Total questions:', totalQuestions);
+
+            const processedResults = {
+                players: leaderboard,
+                leaderboard,
+                correctCount: myStats.correct,
+                wrongCount: myStats.wrong,
+                totalQuestions
+            };
+
+            // Update backend statistics
             try {
                 const currentPlayerData = leaderboard.find(p => p.playerId === parseInt(user.playerId));
                 const score = currentPlayerData?.score ?? 0;
@@ -167,37 +173,39 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
             } catch (error) {
                 console.error('Failed to update multiplayer statistics:', error);
             }
-        })();
 
-        if (onGameFinished) {
-            onGameFinished(processedResults);
+            if (onGameFinished) {
+                onGameFinished(processedResults);
+            }
+
+            // Set results and finished state together
+            console.log('Setting final results and gameFinished=true');
+            setFinalResults(processedResults);
+            setGameFinished(true);
+        } catch (error) {
+            console.error('Error in handleGameFinished:', error);
+            statsUpdatedRef.current = false; // Reset on error
         }
-
-        setFinalResults(processedResults);
-        setGameFinished(true);
     }, [allQuestions, gameState.settings?.category, user.playerId, onGameFinished, calculateAllPlayerStats]);
 
-    // Check for game completion periodically
-    useEffect(() => {
-        const checkGameCompletion = async () => {
-            if (gameFinished) return;
 
+    useEffect(() => {
+        if (gameFinished) return;
+
+        const interval = setInterval(async () => {
             try {
-                const response = await fetch(`/api/games/${roomCode}`, {
+                const res = await fetch(`/api/games/${roomCode}`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                 });
-                if (response.ok) {
-                    const gameDetails = await response.json();
-                    if (gameDetails.state === 'Finished' && !gameFinished) {
-                        handleGameFinished(gameDetails);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to check game completion:', err);
-            }
-        };
+                if (!res.ok) return;
 
-        const interval = setInterval(checkGameCompletion, 1000);
+                const details = await res.json();
+                if (details.state === 'Finished') {
+                    await handleGameFinished(details);
+                }
+            } catch { }
+        }, 2000);
+
         return () => clearInterval(interval);
     }, [roomCode, gameFinished, handleGameFinished]);
 
@@ -246,43 +254,6 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         }
     };
 
-    // Poll for answer status updates
-    useEffect(() => {
-        if (gameFinished || !currentQuestion) return;
-
-        const syncAnswerStatus = async () => {
-            try {
-                const response = await fetch(`/api/games/${roomCode}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                });
-
-                if (response.ok) {
-                    const gameDetails = await response.json();
-                    const players = gameDetails.players || [];
-
-                    setPlayerAnswers(prev => {
-                        const updated = { ...prev };
-
-                        players.forEach(player => {
-                            const playerId = parseInt(player.playerId);
-                            if (player.hasSubmittedAnswer) {
-                                updated[playerId] = true;
-                            }
-                        });
-
-                        return updated;
-                    });
-                }
-            } catch (err) {
-                console.error('Failed to sync answer status:', err);
-            }
-        };
-
-        const interval = setInterval(syncAnswerStatus, 500);
-
-        return () => clearInterval(interval);
-    }, [roomCode, currentQuestion, gameFinished]);
-
     useEffect(() => {
         if (initializationDone.current) {
             return;
@@ -306,9 +277,15 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
                 await signalRService.joinGameRoom(roomCode);
 
-                const nextQuestionHandler = (gameDetails) => {
+
+                const nextQuestionHandler = async (gameDetails) => {
                     if (!mounted.current) return;
-                    console.log('NextQuestion event received');
+
+
+                    if (gameDetails.state === 'Finished') {
+                        await handleGameFinished(gameDetails);
+                        return;
+                    }
 
                     timerExpireHandledRef.current = false;
 
@@ -328,6 +305,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                         });
                     }
                 };
+
 
                 const answerSubmittedHandler = (data) => {
                     if (!mounted.current) return;
@@ -357,24 +335,50 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
                 const gameFinishedHandler = async (finalData) => {
                     if (!mounted.current) return;
-                    console.log('GameFinished event received. Fetching full game details...');
+                    console.log('GameFinished event received. Raw data:', finalData);
 
+                    // Prevent double handling
+                    if (statsUpdatedRef.current) {
+                        console.log('GameFinished: Already processed, ignoring duplicate');
+                        return;
+                    }
+
+                    // Try to fetch full game details for complete data
                     try {
+                        console.log('Fetching full game details for final results...');
                         const response = await fetch(`/api/games/${roomCode}`, {
                             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
                         });
 
                         if (response.ok) {
                             const fullDetails = await response.json();
-                            handleGameFinished(fullDetails);
+                            console.log('Got full game details:', fullDetails);
+                            await handleGameFinished(fullDetails);
                             return;
                         }
                     } catch (e) {
                         console.error('Failed to fetch full game details:', e);
                     }
 
-                    handleGameFinished(finalData);
+                    // Fallback to event data if fetch failed
+                    console.log('Using event data as fallback');
+                    await handleGameFinished(finalData);
                 };
+
+
+
+                const gameStateSyncHandler = async (gameDetails) => {
+                    if (!mounted.current) return;
+
+                    if (gameDetails.state === 'Finished') {
+                        await handleGameFinished(gameDetails);
+                        return;
+                    }
+
+                    nextQuestionHandler(gameDetails);
+                };
+
+
 
                 const gameResetHandler = (details) => {
                     if (!mounted.current) return;
@@ -397,6 +401,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
                     signalRService.onAnswerSubmitted(answerSubmittedHandler);
                     signalRService.onGameFinished(gameFinishedHandler);
                     signalRService.onGameReset(gameResetHandler);
+                    signalRService.onGameStateSync(gameStateSyncHandler);
                     listenersRegistered.current = true;
                 }
 
@@ -409,17 +414,18 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
 
         initializeGame();
 
+
         return () => {
-            if (!mounted.current) {
-                if (listenersRegistered.current) {
-                    signalRService.removeListener('NextQuestion');
-                    signalRService.removeListener('AnswerSubmitted');
-                    signalRService.removeListener('GameFinished');
-                    signalRService.removeListener('GameReset');
-                    listenersRegistered.current = false;
-                }
+            if (listenersRegistered.current) {
+                signalRService.removeListener('NextQuestion');
+                signalRService.removeListener('AnswerSubmitted');
+                signalRService.removeListener('GameFinished');
+                signalRService.removeListener('GameReset');
+                signalRService.removeListener('GameStateSync');
+                listenersRegistered.current = false;
             }
         };
+
     }, [roomCode, user.playerId, handleGameFinished]);
 
     // Debug playerAnswers changes
@@ -509,23 +515,40 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         }
     };
 
+
     const handleNextQuestion = async () => {
         if (!isHost) return;
 
         try {
-            console.log('Host advancing to next question');
-            await fetch(`/api/games/${roomCode}/next`, {
+            const res = await fetch(`/api/games/${roomCode}/next`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
+
+            const data = await res.json();
+
+            // Fallback: if finished, pull final state and render results
+            if (data?.state === "Finished" || data?.message?.includes("Game finished")) {
+                const full = await fetch(`/api/games/${roomCode}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                }).then(r => r.json());
+
+                await handleGameFinished(full);
+            }
         } catch (err) {
             console.error('Next question failed:', err);
         }
     };
 
+
     const handleTimerExpire = useCallback(async () => {
         if (timerExpireHandledRef.current) {
             console.log('Timer expire already handled for this question');
+            return;
+        }
+
+        if (gameFinished) {
+            console.log('Game already finished, skipping timer expire');
             return;
         }
 
@@ -566,7 +589,7 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
         }
 
         await handleNextQuestion();
-    }, [isHost, currentQuestion, hasAnswered, user.playerId, roomCode, allQuestions, gameState.currentQuestionIndex]);
+    }, [isHost, currentQuestion, hasAnswered, user.playerId, roomCode, allQuestions, gameState.currentQuestionIndex, gameFinished]);
 
     const handleBackToLobby = () => {
         onBack();
@@ -583,8 +606,10 @@ const MultiplayerGame = ({ roomCode, user, onGameFinished, onBack }) => {
     const currentScore = currentPlayer?.score ?? currentPlayer?.currentScore ?? 0;
 
     console.log('Rendering - PlayerAnswers:', playerAnswers, 'Count:', answeredPlayersCount, '/', totalPlayersCount);
+    console.log('Rendering - gameFinished:', gameFinished, 'finalResults:', finalResults ? 'present' : 'null');
 
     if (gameFinished && finalResults) {
+        console.log('Rendering MultiplayerResults component');
         return (
             <MultiplayerResults
                 finalResults={finalResults}
