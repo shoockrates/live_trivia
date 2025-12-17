@@ -35,6 +35,9 @@ The project emphasizes **clean architecture, server-authoritative game state, an
 * **Global Leaderboards** – Public leaderboards showing top players overall and by category.
 * **Public Player Statistics** – Publicly accessible player statistics including accuracy, categories played, and overall performance.
 * **Game Summary** – End-of-game overview showing final rankings and question results.
+* **Question Timer** – Each question has a 30-second countdown. Answers are automatically submitted when time expires. The host can advance to the next question earlier only after all players have submitted their answers.
+* **Question Bank Management (Admin)** – Admins can import/export questions from CSV/JSON files, including answers, categories, and difficulty
+* **Game Review & Insights** – After a game, players can review all questions, correct answers, their own responses, and insights such as most missed questions.
 * **Planned Features** – Team-based gameplay with shared scores and other collaborative modes.
 
 > **Note:** Points are **purely time-based**, up to 100 per game; question difficulty does **not** affect scoring.
