@@ -222,5 +222,11 @@ dotnet test
 ```
 
 Includes **unit, integration, and controller tests**. Coverage reports are generated in the `coverage` directory.
+---
+
+## License
+
+This project is licensed under the MIT License.  
+See the `LICENSE` file for details.
 
 ---
