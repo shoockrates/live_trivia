@@ -41,6 +41,15 @@ namespace LiveTriviaBackend.Controllers
             return Ok(questions);
         }
 
+        [HttpPost("submit")]
+        public async Task<IActionResult> Submit([FromBody] QuestionDto questionDto)
+        {
+            if (questionDto == null)
+                return BadRequest("Invalid question data");
+
+            var result = await _questionService.SubmitQuestion(questionDto);
+            return Ok(result);
+        }
 
         [Authorize]
         [HttpPost("load/{file}")]

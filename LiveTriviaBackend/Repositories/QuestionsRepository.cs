@@ -58,12 +58,12 @@ namespace live_trivia.Repositories
             }
 
             var questionsInScope = await query.ToListAsync();
-                var randomQuestions = questionsInScope
-                    .OrderBy(q => Guid.NewGuid())
-                    .Take(count)
-                    .ToList();
+            var randomQuestions = questionsInScope
+                .OrderBy(q => Guid.NewGuid())
+                .Take(count)
+                .ToList();
 
-                return randomQuestions;
+            return randomQuestions;
         }
 
         // Helper method to normalize category names
@@ -166,6 +166,12 @@ namespace live_trivia.Repositories
                 SkippedDuplicates = duplicates,
                 SkippedInvalid = invalid
             };
+        }
+
+        public async Task SubmitQuestion(Question question)
+        {
+            _context.Questions.Add(question);
+            await _context.SaveChangesAsync();
         }
     }
 }

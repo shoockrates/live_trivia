@@ -8,4 +8,5 @@ public interface IQuestionService
     Task<int> LoadFromFileAsync(string filePath);
     Task<List<string>> GetCategoriesAsync();
     Task<QuestionBankImportResultDto> ImportQuestionBankAsync(QuestionBankImportDto dto);
+    Task<bool> SubmitQuestion(QuestionDto questionDto);
 }

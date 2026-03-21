@@ -19,4 +19,21 @@ public class QuestionService : IQuestionService
 
     public Task<QuestionBankImportResultDto> ImportQuestionBankAsync(QuestionBankImportDto dto)
         => _questionsRepo.ImportQuestionBankAsync(dto);
+    public async Task<bool> SubmitQuestion(QuestionDto questionDto)
+    {
+        if (questionDto == null) throw new ArgumentNullException(nameof(questionDto));
+
+        // Convert DTO to entity
+        var question = new Question
+        {
+            Category = questionDto.Category,
+            Difficulty = questionDto.Difficulty,
+            Text = questionDto.Text,
+            Answers = questionDto.Answers,
+            CorrectAnswerIndexes = questionDto.CorrectAnswerIndexes
+        };
+
+        await _questionsRepo.SubmitQuestion(question);
+        return true;
+    }
 }
