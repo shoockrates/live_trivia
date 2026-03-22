@@ -1,5 +1,3 @@
-/* AddQuestionForm.css */
-
 /* Container */
 .add-question-container {
   min-height: 100vh;
@@ -231,6 +229,30 @@
 /* fade-out klasė */
 .success-message.fade-out {
   animation: fadeOut 0.5s ease forwards;
+}
+
+.quiz-questions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.quiz-questions-header .selector-text {
+  margin-bottom: 0;
+}
+
+.quiz-remove-btn {
+  font-size: 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.quiz-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #ff6b6b;
 }
 
 /* Animations */

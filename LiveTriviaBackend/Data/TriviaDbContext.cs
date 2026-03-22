@@ -13,6 +13,7 @@ namespace live_trivia.Data
         public DbSet<Player> Players { get; set; }
         public DbSet<Game> Games { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<Quiz> Quiz { get; set; }
         public DbSet<GamePlayer> GamePlayers { get; set; }
         public DbSet<PlayerAnswer> PlayerAnswers { get; set; }
         public DbSet<User> Users { get; set; }
@@ -113,6 +114,25 @@ namespace live_trivia.Data
                 entity.HasIndex(q => q.Category);
                 entity.HasIndex(q => q.Difficulty);
                 entity.HasIndex(q => new { q.Category, q.Difficulty });
+            });
+
+            modelBuilder.Entity<Quiz>(entity =>
+            {
+                entity.HasKey(q => q.Id);
+                entity.Property(q => q.Id).ValueGeneratedOnAdd();
+                entity.Property(q => q.Name).IsRequired().HasMaxLength(100);
+                entity.Property(q => q.Category).IsRequired().HasMaxLength(50);
+                entity.Property(q => q.Difficulty).IsRequired().HasMaxLength(20);
+                entity.Property(q => q.CreatedAt).IsRequired();
+
+                entity.HasMany(q => q.Questions)
+                    .WithMany()
+                    .UsingEntity<Dictionary<string, object>>(
+                        "QuizQuestion",
+                        j => j.HasOne<Question>().WithMany().HasForeignKey("QuestionId"),
+                        j => j.HasOne<Quiz>().WithMany().HasForeignKey("QuizId"),
+                        j => j.HasKey("QuizId", "QuestionId")
+                    );
             });
 
             // Configure GamePlayer table (many-to-many relationship)

@@ -17,6 +17,7 @@ import Profile from "./components/Profile";
 import MultiplayerGameRoom from "./components/MultiplayerGameRoom";
 import MultiplayerGame from "./components/MultiplayerGame";
 import signalRService from "./services/signalRService";
+import AddQuizForm from "./components/AddQuizForm";
 
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -175,8 +176,8 @@ function App() {
     }
   };
 
-  const handleAddQuestion = () => {
-    setCurrentView("add-question");
+  const handleAddQuestion = (type) => {
+    setCurrentView(type === "add-quiz" ? "add-quiz" : "add-question");
   };
 
   const handleBackToGameMode = () => {
@@ -261,6 +262,10 @@ function App() {
   };
 
   const handleQuestionAdded = async () => {
+    await loadCategories();
+  };
+
+  const handleQuizAdded = async () => {
     await loadCategories();
   };
 
@@ -610,7 +615,7 @@ function App() {
           onSelectMode={handleGameModeSelect}
           onBack={handleLogout}
         />
-        <AddQuestion onSelectMode={handleAddQuestion} />
+        <AddQuestion onSelectType={handleAddQuestion} />
       </div>
     );
   }
@@ -621,6 +626,17 @@ function App() {
         <AddQuestionForm
           onBack={handleBackToGameMode}
           onSuccess={handleQuestionAdded}
+        />
+      </div>
+    );
+  }
+
+  if (currentView === "add-quiz") {
+    return (
+      <div className="App">
+        <AddQuizForm
+          onBack={handleBackToGameMode}
+          onSuccess={handleQuizAdded}
         />
       </div>
     );

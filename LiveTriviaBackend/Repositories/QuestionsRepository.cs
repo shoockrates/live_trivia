@@ -173,5 +173,46 @@ namespace live_trivia.Repositories
             _context.Questions.Add(question);
             await _context.SaveChangesAsync();
         }
+
+        public async Task SubmitQuiz(Quiz quiz)
+        {
+            foreach (var question in quiz.Questions)
+            {
+                // Only add if it's a new question (no Id yet)
+                if (question.Id == 0)
+                {
+                    _context.Questions.Add(question);
+                }
+            }
+            _context.Quiz.Add(quiz);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<Question>> GetQuizQuestions(string name)
+        {
+            var quiz = await _context.Quiz
+                .Include(q => q.Questions)
+                .FirstOrDefaultAsync(q => q.Name.ToLower() == name.ToLower());
+
+            if (quiz == null)
+                return new List<Question>();
+
+            return quiz.Questions.ToList();
+        }
+
+        public async Task<Quiz?> GetQuizByName(string name)
+        {
+            return await _context.Quiz
+                .Include(q => q.Questions)
+                .FirstOrDefaultAsync(q => q.Name.ToLower() == name.ToLower());
+        }
+
+        public async Task<List<Quiz>> GetAllQuizzes()
+        {
+            return await _context.Quiz
+                .Include(q => q.Questions)
+                .OrderBy(q => q.Name)
+                .ToListAsync();
+        }
     }
 }
