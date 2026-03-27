@@ -154,7 +154,7 @@ const AddQuizForm = ({ onBack, onSuccess }) => {
     };
 
     try {
-      const res = await fetch("http://localhost:5216/questions/submit-quiz", {
+      const res = await fetch("http://localhost:5216/quizzes/submit-quiz", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
