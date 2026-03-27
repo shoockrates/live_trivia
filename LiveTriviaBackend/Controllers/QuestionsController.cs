@@ -41,13 +41,6 @@ namespace LiveTriviaBackend.Controllers
             return Ok(questions);
         }
 
-        [HttpGet("quiz/{name}")]
-        public async Task<IActionResult> GetByQuiz(string name)
-        {
-            var quiz = await _questionService.GetQuizQuestions(name);
-            return Ok(quiz);
-        }
-
         [HttpPost("submit")]
         public async Task<IActionResult> Submit([FromBody] QuestionDto questionDto)
         {
@@ -55,23 +48,6 @@ namespace LiveTriviaBackend.Controllers
                 return BadRequest("Invalid question data");
 
             var result = await _questionService.SubmitQuestion(questionDto);
-            return Ok(result);
-        }
-
-        [HttpPost("submit-quiz")]
-        public async Task<IActionResult> SubmitQuiz([FromBody] QuizDto quizDto)
-        {
-            if (quizDto == null)
-                return BadRequest("Invalid quiz data.");
-
-            // Bug fix: validate required fields
-            if (string.IsNullOrWhiteSpace(quizDto.Name))
-                return BadRequest("Quiz name is required.");
-
-            if (quizDto.Questions == null || quizDto.Questions.Count == 0)
-                return BadRequest("Quiz must have at least one question.");
-
-            var result = await _questionService.SubmitQuiz(quizDto);
             return Ok(result);
         }
 
@@ -97,13 +73,6 @@ namespace LiveTriviaBackend.Controllers
         {
             var categories = await _questionService.GetCategoriesAsync();
             return Ok(categories);
-        }
-
-        [HttpGet("quizzes")]
-        public async Task<IActionResult> GetAllQuizzes()
-        {
-            var quizzes = await _questionService.GetAllQuizzes();
-            return Ok(quizzes);
         }
 
         [HttpGet("export")]
