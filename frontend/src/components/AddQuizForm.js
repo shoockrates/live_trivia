@@ -180,6 +180,7 @@ const AddQuizForm = ({ onBack, onSuccess }) => {
     } catch (err) {
       setError(err.message);
     }
+    window.location.reload();
   };
 
   return (

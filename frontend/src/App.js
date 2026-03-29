@@ -10,6 +10,8 @@ import GameRoom from "./components/GameRoom";
 import PlayerStats from "./components/PlayerStats";
 import Leaderboard from "./components/Leaderboard";
 import CategorySelector from "./components/CategorySelector";
+import SelectionModeSelector from "./components/SelectionModeSelector";
+import QuizSelector from "./components/QuizSelector";
 import QuestionDisplay from "./components/QuestionDisplay";
 import AddQuestionForm from "./components/AddQuestionForm";
 import GameResults from "./components/GameResults";
@@ -22,6 +24,9 @@ import AddQuizForm from "./components/AddQuizForm";
 function App() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [selectionMode, setSelectionMode] = useState(null); // 'category' | 'quiz'
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -170,7 +175,7 @@ function App() {
   const handleGameModeSelect = (mode) => {
     setGameMode(mode);
     if (mode === "single") {
-      setCurrentView("game");
+      setCurrentView("selection-mode"); // new screen: pick category vs quiz
     } else if (mode === "multiplayer") {
       setCurrentView("multiplayer-lobby");
     }
@@ -183,6 +188,8 @@ function App() {
   const handleBackToGameMode = () => {
     setCurrentView("game-mode");
     setGameMode(null);
+    setSelectionMode(null);
+    setSelectedQuiz(null);
     setRoomCode(null);
     setCurrentGameRoom(null);
   };
@@ -269,6 +276,20 @@ function App() {
     await loadCategories();
   };
 
+  const loadQuizzes = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/quizzes/quizzes`);
+      if (!res.ok) throw new Error(`Failed to load quizzes (${res.status})`);
+      const data = await res.json();
+      const names = (Array.isArray(data) ? data : [])
+        .map((q) => q.name || q.Name)
+        .filter(Boolean);
+      setQuizzes(Array.from(new Set(names)).sort((a, b) => a.localeCompare(b)));
+    } catch (e) {
+      console.error("Failed to load quizzes:", e.message);
+    }
+  };
+
   const loadCategories = async () => {
     try {
       setError(null);
@@ -305,7 +326,43 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
     loadCategories();
+    loadQuizzes();
   }, [isAuthenticated]);
+
+  const handleSelectQuiz = (quiz) => {
+    setSelectedQuiz(quiz);
+    setScore(0);
+    setSelectedCategory(quiz); // reuse category-based question flow keyed by quiz name
+    setLoading(true);
+    setError(null);
+    setCurrentIndex(0);
+    setSelectedAnswerIndex(null);
+    setRevealed(false);
+    setCorrectCount(0);
+    setWrongCount(0);
+    setGameFinished(false);
+    setGameEndedAt(null);
+    setGameStartedAt(Date.now());
+
+    fetch(`${API_BASE}/quizzes/${encodeURIComponent(quiz)}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Failed to load quiz "${quiz}" (${r.status})`);
+        return r.json();
+      })
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : [];
+        const filtered = arr.filter((q) => {
+          const t = (q.text || q.question || "").trim();
+          const a = Array.isArray(q.answers || q.Answers) ? q.answers || q.Answers : [];
+          const c = Array.isArray(q.correctAnswerIndexes || q.CorrectAnswerIndexes)
+            ? q.correctAnswerIndexes || q.CorrectAnswerIndexes : [];
+          return t.length > 0 && a.length > 0 && c.length > 0;
+        });
+        setQuestions(filtered);
+      })
+      .catch((err) => setError(err.message || "Failed to load"))
+      .finally(() => setLoading(false));
+  };
 
   const handleSelect = (category) => {
     setScore(0);
@@ -350,6 +407,7 @@ function App() {
     setIsAnimatingBack(true);
     setTimeout(() => {
       setSelectedCategory(null);
+      setSelectedQuiz(null);
       setIsAnimatingBack(false);
     }, 220);
   };
@@ -670,6 +728,65 @@ function App() {
     );
   }
 
+  // Render selection mode (category vs quiz)
+  if (currentView === "selection-mode") {
+    return (
+      <div className="App">
+        <div
+          style={{ position: "absolute", top: "20px", right: "20px", zIndex: 1000 }}
+        >
+          <UserDropdown
+            user={user}
+            onLogout={handleLogout}
+            onShowStats={handleShowStats}
+            onShowLeaderboard={handleShowLeaderboard}
+            onShowProfile={handleShowProfile}
+          />
+        </div>
+        <SelectionModeSelector
+          onSelectMode={(mode) => {
+            setSelectionMode(mode);
+            if (mode === "category") {
+              setCurrentView("game");
+            } else {
+              setCurrentView("quiz-selector");
+            }
+          }}
+          onBack={handleBackToGameMode}
+        />
+      </div>
+    );
+  }
+
+  // Render quiz selector
+  if (currentView === "quiz-selector") {
+    return (
+      <div className="App">
+        <div
+          style={{ position: "absolute", top: "20px", right: "20px", zIndex: 1000 }}
+        >
+          <UserDropdown
+            user={user}
+            onLogout={handleLogout}
+            onShowStats={handleShowStats}
+            onShowLeaderboard={handleShowLeaderboard}
+            onShowProfile={handleShowProfile}
+          />
+        </div>
+        <QuizSelector
+          quizzes={quizzes}
+          onSelectQuiz={(quiz) => {
+            handleSelectQuiz(quiz);
+            setCurrentView("game");
+          }}
+          loading={loading}
+          error={error}
+          onBack={() => setCurrentView("selection-mode")}
+        />
+      </div>
+    );
+  }
+
   // Render main game for authenticated users
   const showSubmitButton =
     selectedCategory && !gameFinished && questions.length > 0;
@@ -727,7 +844,7 @@ function App() {
             loading={loading}
             error={error}
             user={user}
-            onBack={handleBackToGameMode}
+            onBack={() => setCurrentView("selection-mode")}
           />
         )}
 
@@ -771,7 +888,12 @@ function App() {
                 totalQuestions={questions.length}
                 gameDuration={gameDurationMs}
                 onPlayAgain={restartGame}
-                onBackToCategories={handleBack}
+                onBackToCategories={() => {
+                  handleBack();
+                  if (selectionMode === "quiz") {
+                    setCurrentView("quiz-selector");
+                  }
+                }}
                 category={selectedCategory}
               />
             )}
