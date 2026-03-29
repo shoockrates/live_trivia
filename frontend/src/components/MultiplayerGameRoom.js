@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MultiplayerGameRoom.css';
 import signalRService from '../services/signalRService';
+import QuizSelector from './QuizSelector';
 
 const API_BASE = 'http://localhost:5216';
 
@@ -21,6 +22,12 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
     const [voteTallies, setVoteTallies] = useState({});
     const [myVote, setMyVote] = useState(null);
     const [remainingSeconds, setRemainingSeconds] = useState(null);
+
+    // Quiz selection state
+    const [showQuizSelector, setShowQuizSelector] = useState(false);
+    const [quizzes, setQuizzes] = useState([]);
+    const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+    const [selectedQuiz, setSelectedQuiz] = useState(null); // name of selected quiz (null = category mode)
 
     const listenersRegistered = useRef(false);
     const mounted = useRef(true);
@@ -227,6 +234,18 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         setGameState(gameDetails.state?.toLowerCase() || 'waiting');
                     });
 
+                    // Quiz selected by host — broadcast to all players
+                    signalRService.connection.on('QuizSelected', (data) => {
+                        if (!mounted.current) return;
+                        const quiz = data.quizName ?? data.QuizName ?? null;
+                        console.log('QuizSelected event received:', quiz);
+                        setSelectedQuiz(quiz);
+                        if (quiz) {
+                            setSelectedCategory(quiz); // use quiz name as the "category" key for start
+                            setIsCategoryLocked(true);
+                        }
+                    });
+
                     listenersRegistered.current = true;
                     console.log('All SignalR event handlers registered');
 
@@ -277,6 +296,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 signalRService.connection.off('CategoryVotingFinished');
                 signalRService.connection.off('CategoryRevoteStarted');
                 signalRService.connection.off('CategoryVotingTimer');
+                signalRService.connection.off('QuizSelected');
 
                 signalRService.leaveGameRoom(roomCode).catch(() => { });
                 listenersRegistered.current = false;
@@ -319,9 +339,50 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         }
     }, []);
 
+    // Load quizzes for the quiz picker
+    useEffect(() => {
+        const loadQuizzes = async () => {
+            try {
+                setLoadingQuizzes(true);
+                const response = await fetch(`${API_BASE}/quizzes/quizzes`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const names = (Array.isArray(data) ? data : [])
+                        .map(q => q.name || q.Name)
+                        .filter(Boolean);
+                    if (mounted.current) {
+                        setQuizzes(Array.from(new Set(names)).sort((a, b) => a.localeCompare(b)));
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load quizzes:', err);
+            } finally {
+                if (mounted.current) setLoadingQuizzes(false);
+            }
+        };
+        loadQuizzes();
+    }, []);
+
+    const handleQuizSelect = async (quizName) => {
+        setSelectedQuiz(quizName);
+        setSelectedCategory(quizName);
+        setIsCategoryLocked(true);
+        setShowQuizSelector(false);
+
+        // Broadcast to all players in the room via SignalR
+        try {
+            await signalRService.connection.invoke('SelectQuiz', roomCode, quizName);
+        } catch (err) {
+            // Fallback: even if broadcast fails the host still has it selected
+            console.error('Failed to broadcast quiz selection:', err);
+        }
+    };
+
     const handleStartGame = async () => {
         if (!selectedCategory) {
-            setError('Please select a category first');
+            setError('Please select a category or quiz first');
             return;
         }
 
@@ -334,7 +395,51 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         setError('');
 
         try {
-            console.log('Starting game with category:', selectedCategory);
+            let settingsPayload;
+
+            if (selectedQuiz) {
+                // Fetch the actual quiz questions so we know the real category
+                // and exact question count — the game engine only understands category
+                console.log('Fetching quiz questions for:', selectedQuiz);
+                const quizRes = await fetch(`${API_BASE}/quizzes/${encodeURIComponent(selectedQuiz)}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+
+                if (!quizRes.ok) {
+                    throw new Error(`Failed to fetch quiz "${selectedQuiz}"`);
+                }
+
+                const quizQuestions = await quizRes.json();
+                const questions = Array.isArray(quizQuestions) ? quizQuestions : [];
+
+                if (questions.length === 0) {
+                    throw new Error(`Quiz "${selectedQuiz}" has no questions`);
+                }
+
+                // Extract the category from the first question
+                const quizCategory = questions[0].category || questions[0].Category;
+                if (!quizCategory) {
+                    throw new Error(`Could not determine category for quiz "${selectedQuiz}"`);
+                }
+
+                console.log(`Quiz "${selectedQuiz}" → category: "${quizCategory}", questions: ${questions.length}`);
+
+                settingsPayload = {
+                    category: quizCategory,
+                    questionCount: questions.length, // use exact count so backend never runs short
+                    timeLimitSeconds: 30,
+                    difficulty: "any"
+                };
+            } else {
+                settingsPayload = {
+                    category: selectedCategory,
+                    questionCount: 5,
+                    timeLimitSeconds: 30,
+                    difficulty: "any"
+                };
+            }
+
+            console.log('Sending game settings:', settingsPayload);
 
             const settingsResponse = await fetch(`${API_BASE}/games/${roomCode}/settings`, {
                 method: 'POST',
@@ -342,12 +447,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({
-                    category: selectedCategory,
-                    questionCount: 5,
-                    timeLimitSeconds: 30,
-                    difficulty: "any"
-                })
+                body: JSON.stringify(settingsPayload)
             });
 
             if (!settingsResponse.ok) {
@@ -436,6 +536,17 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
     return (
         <div className="multiplayer-game-room-container">
+            {showQuizSelector && (
+                <div className="quiz-selector-overlay">
+                    <QuizSelector
+                        quizzes={quizzes}
+                        onSelectQuiz={handleQuizSelect}
+                        loading={loadingQuizzes}
+                        error={null}
+                        onBack={() => setShowQuizSelector(false)}
+                    />
+                </div>
+            )}
             <div className="multiplayer-game-room-card">
                 <div className="room-header">
                     <h2 className="room-title">Game Room</h2>
@@ -503,37 +614,71 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
 
                         {!isVoting && (
                             <>
-                                <div className="category-selection">
-                                    <label>Select Category</label>
-                                    {loadingCategories ? (
-                                        <div className="loading-categories">
-                                            <div className="loading-spinner-small"></div>
-                                            <span>Loading categories...</span>
+                                {/* Show selected quiz badge if a quiz is locked in */}
+                                {selectedQuiz && (
+                                    <div className="selected-quiz-banner">
+                                        <span className="selected-quiz-icon">📋</span>
+                                        <div className="selected-quiz-info">
+                                            <span className="selected-quiz-label">Quiz Selected</span>
+                                            <span className="selected-quiz-name">{selectedQuiz}</span>
                                         </div>
-                                    ) : categories.length > 0 ? (
-                                        <div className="category-grid">
-                                            {categories.map((category) => (
-                                                <button
-                                                    key={category}
-                                                    className={`category-button ${selectedCategory === category ? 'selected' : ''}`}
-                                                    onClick={() => {
-                                                        if (isCategoryLocked) return;
-                                                        setSelectedCategory(category);
-                                                    }}
-                                                    disabled={isCategoryLocked}
-                                                >
-                                                    {category}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="no-categories-message">
-                                            <span>No categories available</span>
-                                        </div>
-                                    )}
-                                </div>
+                                        <button
+                                            className="clear-quiz-button"
+                                            onClick={() => { setSelectedQuiz(null); setSelectedCategory(null); setIsCategoryLocked(false); }}
+                                            title="Clear quiz selection"
+                                        >✕</button>
+                                    </div>
+                                )}
 
-                                {isHost && (
+                                {!selectedQuiz && (
+                                    <div className="category-selection">
+                                        <label>Select Category</label>
+                                        {loadingCategories ? (
+                                            <div className="loading-categories">
+                                                <div className="loading-spinner-small"></div>
+                                                <span>Loading categories...</span>
+                                            </div>
+                                        ) : categories.length > 0 ? (
+                                            <div className="category-grid">
+                                                {categories.map((category) => (
+                                                    <button
+                                                        key={category}
+                                                        className={`category-button ${selectedCategory === category ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            if (isCategoryLocked) return;
+                                                            setSelectedCategory(category);
+                                                        }}
+                                                        disabled={isCategoryLocked}
+                                                    >
+                                                        {category}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="no-categories-message">
+                                                <span>No categories available</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {isHost && !selectedQuiz && (
+                                    <>
+                                        <div className="or-divider"><span>OR</span></div>
+                                        <div className="voting-start">
+                                            <label>Pick a specific quiz</label>
+                                            <button
+                                                className="select-quiz-button"
+                                                onClick={() => setShowQuizSelector(true)}
+                                                disabled={isCategoryLocked}
+                                            >
+                                                <span>📋</span> Select a Quiz
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {isHost && !selectedQuiz && (
                                     <>
                                         <div className="or-divider"><span>OR</span></div>
                                         <div className="voting-start">
@@ -611,7 +756,16 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         <div className="waiting-spinner"></div>
                         <p>Waiting for host to start the game...</p>
                         <p className="players-count">Players in room: {players.length}</p>
-                        {selectedCategory && (
+                        {selectedQuiz && (
+                            <div className="selected-quiz-banner non-host">
+                                <span className="selected-quiz-icon">📋</span>
+                                <div className="selected-quiz-info">
+                                    <span className="selected-quiz-label">Quiz Selected by Host</span>
+                                    <span className="selected-quiz-name">{selectedQuiz}</span>
+                                </div>
+                            </div>
+                        )}
+                        {!selectedQuiz && selectedCategory && (
                             <p className="category-info">Category: {selectedCategory}</p>
                         )}
                     </div>

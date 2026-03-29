@@ -28,7 +28,6 @@ const MultiplayerLobby = ({ onBack, onCreateGame, onJoinGame, user }) => {
 
         initConnection();
 
-        // Cleanup - but don't stop connection, just mark as not ready
         return () => {
             setConnectionReady(false);
         };
