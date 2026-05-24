@@ -80,13 +80,6 @@ namespace live_trivia.Hubs
                         Timestamp = DateTime.UtcNow,
                         GameState = gameDetails // Include updated game state
                     });
-
-                    var systemMessage = await _chatService.CreateSystemMessageAsync(
-                        roomId,
-                        $"{playerName ?? "A player"} left the room");
-
-                    await Clients.Group(roomId)
-                        .SendAsync("ChatMessageReceived", systemMessage);
                 }
             }
             catch (Exception ex)
@@ -247,11 +240,24 @@ namespace live_trivia.Hubs
                 }
                 else
                 {
-                    var leaderboard = game.GetLeaderboard();
+                    var leaderboard = game.GetLeaderboard()
+                        .Select(p => new
+                        {
+                            Id = p.Id,
+                            Name = p.Name,
+                            Score = p.Score
+                        })
+                        .OrderByDescending(p => p.Score)
+                        .ToList();
+
                     await Clients.Group(roomId).SendAsync("GameFinished", new
                     {
                         Leaderboard = leaderboard,
-                        FinalScores = leaderboard.Select(p => new { p.Name, p.Score })
+                        FinalScores = leaderboard.Select(p => new
+                        {
+                            p.Name,
+                            p.Score
+                        }).ToList()
                     });
                 }
             }

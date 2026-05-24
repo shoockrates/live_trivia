@@ -40,9 +40,6 @@ public class ChatService : IChatService
         if (game == null)
             throw new InvalidOperationException("Game room was not found.");
 
-        if (game.State == GameState.InProgress)
-            throw new InvalidOperationException("Chat is disabled during gameplay.");
-
         if (!game.GamePlayers.Any(gp => gp.PlayerId == playerId))
             throw new InvalidOperationException("Player is not in this game room.");
 
@@ -130,9 +127,6 @@ public class ChatService : IChatService
 
         if (game == null)
             return null;
-
-        if (game.State == GameState.InProgress)
-            throw new InvalidOperationException("Chat reactions are disabled during gameplay.");
 
         if (!game.GamePlayers.Any(gp => gp.PlayerId == playerId))
             throw new InvalidOperationException("Player is not in this game room.");

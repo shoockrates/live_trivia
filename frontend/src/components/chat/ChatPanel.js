@@ -4,20 +4,69 @@ import './ChatPanel.css';
 
 const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 
-const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false }) => {
+const ChatPanel = ({
+    roomId,
+    currentPlayerId,
+    disabled = false,
+    readOnly = false,
+    suppressConnectionErrors = false
+}) => {
     const [messages, setMessages] = useState([]);
     const [text, setText] = useState('');
     const [error, setError] = useState('');
+    const [openReactionFor, setOpenReactionFor] = useState(null);
     const bottomRef = useRef(null);
 
     useEffect(() => {
         if (!roomId) return;
 
+        let disposed = false;
+
+        const ensureChatConnection = async () => {
+            try {
+                const token = localStorage.getItem('token');
+
+                if (!token) {
+                    setError('No authentication token found');
+                    return;
+                }
+
+                await signalRService.startConnection(token);
+
+                await signalRService.waitForConnection();
+
+                if (signalRService.currentRoomId !== roomId) {
+                    await signalRService.joinGameRoom(roomId);
+                }
+
+                if (!disposed) {
+                    setError('');
+                    await signalRService.getChatHistory(roomId);
+                }
+            } catch (err) {
+                if (!disposed) {
+                    const message = err.message || 'Failed to connect to chat';
+                    if (suppressConnectionErrors && /signalr|connection/i.test(message)) {
+                        return;
+                    }
+
+                    setError(message);
+                }
+            }
+        };
+
         const handleHistoryLoaded = (history) => {
+            if (disposed) return;
+
+            setError('');
             setMessages(Array.isArray(history) ? history : []);
         };
 
         const handleMessageReceived = (message) => {
+            if (disposed) return;
+
+            setError('');
+
             setMessages((prev) => {
                 if (prev.some((m) => m.id === message.id)) return prev;
                 return [...prev, message];
@@ -25,17 +74,28 @@ const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false
         };
 
         const handleReactionUpdated = (updatedMessage) => {
+            if (disposed) return;
+
             setMessages((prev) =>
                 prev.map((m) => (m.id === updatedMessage.id ? updatedMessage : m))
             );
         };
 
         const handleMessageDeleted = (data) => {
+            if (disposed) return;
+
             const deletedId = data.messageId ?? data.MessageId;
+
             setMessages((prev) => prev.filter((m) => m.id !== deletedId));
         };
 
         const handleChatError = (message) => {
+            if (disposed) return;
+
+            if (suppressConnectionErrors && /signalr|connection/i.test(message)) {
+                return;
+            }
+
             setError(message);
             setTimeout(() => setError(''), 3500);
         };
@@ -46,11 +106,11 @@ const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false
         signalRService.onChatMessageDeleted(handleMessageDeleted);
         signalRService.onChatError(handleChatError);
 
-        signalRService.getChatHistory(roomId).catch((err) => {
-            setError(err.message || 'Failed to load chat history');
-        });
+        ensureChatConnection();
 
         return () => {
+            disposed = true;
+
             signalRService.removeListener('ChatHistoryLoaded', handleHistoryLoaded);
             signalRService.removeListener('ChatMessageReceived', handleMessageReceived);
             signalRService.removeListener('ChatReactionUpdated', handleReactionUpdated);
@@ -84,6 +144,7 @@ const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false
 
         try {
             await signalRService.reactToMessage(messageId, emoji);
+            setOpenReactionFor(null);
         } catch (err) {
             setError(err.message || 'Failed to react');
         }
@@ -92,15 +153,18 @@ const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false
     const handleDelete = async (messageId) => {
         if (disabled || readOnly) return;
 
-        const confirmed = window.confirm('Delete this message?');
-        if (!confirmed) return;
-
         try {
             await signalRService.deleteChatMessage(messageId);
         } catch (err) {
             setError(err.message || 'Failed to delete message');
         }
     };
+
+    const shouldShowError =
+        error &&
+        !messages.length &&
+        !(signalRService.isConnected && /signalr|connection/i.test(error)) &&
+        !(suppressConnectionErrors && /signalr|connection/i.test(error));
 
     return (
         <div className="chat-panel">
@@ -117,7 +181,9 @@ const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false
                 </div>
             </div>
 
-            {error && <div className="chat-error">{error}</div>}
+            {shouldShowError && (
+                <div className="chat-error">{error}</div>
+            )}
 
             <div className="chat-messages">
                 {messages.length === 0 ? (
@@ -157,41 +223,61 @@ const ChatPanel = ({ roomId, currentPlayerId, disabled = false, readOnly = false
                                     </div>
 
                                     {!message.isSystemMessage && (
-                                        <div className="chat-actions">
-                                            {!readOnly && !disabled && (
-                                                <div className="emoji-actions">
-                                                    {ALLOWED_EMOJIS.map((emoji) => (
+                                        <>
+                                            <div className="chat-actions">
+                                                {!readOnly && !disabled && (
+                                                    <div className="reaction-picker-wrapper">
                                                         <button
-                                                            key={emoji}
                                                             type="button"
-                                                            onClick={() => handleReact(message.id, emoji)}
+                                                            className="reaction-toggle-button"
+                                                            aria-label="Add reaction"
+                                                            title="Add reaction"
+                                                            onClick={() =>
+                                                                setOpenReactionFor(
+                                                                    openReactionFor === message.id ? null : message.id
+                                                                )
+                                                            }
                                                         >
-                                                            {emoji}
+                                                            +
                                                         </button>
+
+                                                        {openReactionFor === message.id && (
+                                                            <div className="reaction-popup">
+                                                                {ALLOWED_EMOJIS.map((emoji) => (
+                                                                    <button
+                                                                        key={emoji}
+                                                                        type="button"
+                                                                        onClick={() => handleReact(message.id, emoji)}
+                                                                    >
+                                                                        {emoji}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {isMine && !readOnly && !disabled && (
+                                                    <button
+                                                        type="button"
+                                                        className="delete-message-button"
+                                                        onClick={() => handleDelete(message.id)}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {message.reactions && Object.keys(message.reactions).length > 0 && (
+                                                <div className="reaction-list">
+                                                    {Object.entries(message.reactions).map(([emoji, count]) => (
+                                                        <span key={emoji} className="reaction-pill">
+                                                            {emoji} {count}
+                                                        </span>
                                                     ))}
                                                 </div>
                                             )}
-
-                                            {isMine && !readOnly && !disabled && (
-                                                <button
-                                                    type="button"
-                                                    className="delete-message-button"
-                                                    onClick={() => handleDelete(message.id)}
-                                                >
-                                                    Delete
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {message.reactions && Object.keys(message.reactions).length > 0 && (
-                                        <div className="reaction-list">
-                                            {Object.entries(message.reactions).map(([emoji, count]) => (
-                                                <span key={emoji} className="reaction-pill">
-                                                    {emoji} {count}
-                                                </span>
-                                            ))}
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                             </div>

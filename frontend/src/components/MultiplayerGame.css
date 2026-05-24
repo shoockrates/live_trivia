@@ -12,6 +12,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    align-items: stretch;
 }
 
 .multiplayer-main-column {
@@ -365,21 +366,26 @@
 
 @media (min-width: 1100px) {
     .multiplayer-game-layout {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 420px;
+        align-items: stretch;
+        gap: 24px;
     }
 
     .multiplayer-main-column {
         width: 100%;
-        max-width: 900px;
+        max-width: none;
     }
 
     .players-sidebar {
-        position: absolute;
-        left: calc(50% + 450px + 12px);
-        top: 0;
-        width: 420px;
+        width: 100%;
+        max-width: none;
+        display: flex;
+    }
+
+    .players-status {
+        width: 100%;
+        flex: 1;
+        min-height: 100%;
     }
 }

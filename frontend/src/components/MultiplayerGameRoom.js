@@ -281,12 +281,11 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         initializeConnection();
 
         return () => {
-            // Mark as unmounted
             mounted.current = false;
 
-            // Clean up listeners on unmount
             if (listenersRegistered.current && signalRService.connection) {
                 console.log('Cleaning up SignalR listeners');
+
                 signalRService.connection.off('GameStateSync');
                 signalRService.connection.off('PlayerJoined');
                 signalRService.connection.off('PlayerLeft');
@@ -298,17 +297,10 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 signalRService.connection.off('CategoryRevoteStarted');
                 signalRService.connection.off('CategoryVotingTimer');
                 signalRService.connection.off('QuizSelected');
-                signalRService.connection.off('ChatHistoryLoaded');
-                signalRService.connection.off('ChatMessageReceived');
-                signalRService.connection.off('ChatReactionUpdated');
-                signalRService.connection.off('ChatMessageDeleted');
-                signalRService.connection.off('ChatError');
 
-                signalRService.leaveGameRoom(roomCode).catch(() => { });
                 listenersRegistered.current = false;
             }
 
-            // Reset initialization flag so it can run again if component remounts
             initializationDone.current = false;
         };
     }, [roomCode, user.playerId, onStartGame]);
@@ -531,7 +523,13 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         }
     };
 
-    const handleBack = () => {
+    const handleBack = async () => {
+        try {
+            await signalRService.leaveGameRoom(roomCode);
+        } catch (err) {
+            console.error('Failed to leave room:', err);
+        }
+
         onBack();
     };
 
@@ -793,7 +791,7 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         readOnly={false}
                     />
                 )}
-                
+
                 <button className="back-button" onClick={handleBack}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z" />
