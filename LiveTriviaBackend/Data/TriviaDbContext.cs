@@ -20,6 +20,8 @@ namespace live_trivia.Data
         public DbSet<PlayerStatistics> PlayerStatistics { get; set; }
         public DbSet<CategoryStatistics> CategoryStatistics { get; set; }
         public DbSet<GameSettings> GameSettings { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<MessageReaction> MessageReactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -277,6 +279,57 @@ namespace live_trivia.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            //Configure ChatMessage table
+            modelBuilder.Entity<ChatMessage>(entity =>
+            {
+                entity.HasKey(m => m.Id);
+
+                entity.Property(m => m.GameRoomId)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(m => m.MessageText)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(m => m.SentAt)
+                    .IsRequired();
+
+                entity.HasIndex(m => m.GameRoomId);
+
+                entity.HasOne<Game>()
+                    .WithMany()
+                    .HasForeignKey(m => m.GameRoomId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(m => m.SenderPlayer)
+                    .WithMany()
+                    .HasForeignKey(m => m.SenderPlayerId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            //Configure MessageReaction table
+            modelBuilder.Entity<MessageReaction>(entity =>
+            {
+                entity.HasKey(r => r.Id);
+
+                entity.Property(r => r.Emoji)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.HasIndex(r => new { r.ChatMessageId, r.PlayerId })
+                    .IsUnique();
+
+                entity.HasOne(r => r.ChatMessage)
+                    .WithMany(m => m.Reactions)
+                    .HasForeignKey(r => r.ChatMessageId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(r => r.Player)
+                    .WithMany()
+                    .HasForeignKey(r => r.PlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

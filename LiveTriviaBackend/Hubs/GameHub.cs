@@ -14,15 +14,21 @@ namespace live_trivia.Hubs
         private readonly IGameService _gameService;
         private readonly GamesRepository _gamesRepository;
         private readonly IActiveGamesService _activeGamesService;
+        private readonly IChatService _chatService;
 
         private static readonly ConcurrentDictionary<string, CategoryVotingState> _categoryVotingStates
             = new();
 
-        public GameHub(IGameService gameService, GamesRepository gamesRepository, IActiveGamesService activeGamesService)
+        public GameHub(
+            IGameService gameService,
+            GamesRepository gamesRepository,
+            IActiveGamesService activeGamesService,
+            IChatService chatService)
         {
             _gameService = gameService;
             _gamesRepository = gamesRepository;
             _activeGamesService = activeGamesService;
+            _chatService = chatService;
         }
 
 
@@ -74,6 +80,13 @@ namespace live_trivia.Hubs
                         Timestamp = DateTime.UtcNow,
                         GameState = gameDetails // Include updated game state
                     });
+
+                    var systemMessage = await _chatService.CreateSystemMessageAsync(
+                        roomId,
+                        $"{playerName ?? "A player"} left the room");
+
+                    await Clients.Group(roomId)
+                        .SendAsync("ChatMessageReceived", systemMessage);
                 }
             }
             catch (Exception ex)
@@ -529,6 +542,105 @@ namespace live_trivia.Hubs
             }
 
             return Task.FromResult(playerId);
+        }
+
+        public async Task GetChatHistory(string roomId)
+        {
+            try
+            {
+                var history = await _chatService.GetRoomHistoryAsync(roomId);
+                await Clients.Caller.SendAsync("ChatHistoryLoaded", history);
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("Error", ex.Message);
+            }
+        }
+
+        public async Task SendChatMessage(string roomId, string message)
+        {
+            try
+            {
+                var playerId = await GetCurrentPlayerId();
+                var playerName = Context.User?.Identity?.Name ?? "Unknown";
+
+                var dto = await _chatService.SendMessageAsync(
+                    roomId,
+                    playerId,
+                    playerName,
+                    message);
+
+                await Clients.Group(roomId)
+                    .SendAsync("ChatMessageReceived", dto);
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ChatError", ex.Message);
+            }
+        }
+
+        public async Task ReactToMessage(int messageId, string emoji)
+        {
+            try
+            {
+                var playerId = await GetCurrentPlayerId();
+
+                var dto = await _chatService.ToggleReactionAsync(
+                    messageId,
+                    playerId,
+                    emoji);
+
+                if (dto == null)
+                {
+                    await Clients.Caller.SendAsync("ChatError", "Message was not found.");
+                    return;
+                }
+
+                await Clients.Group(dto.RoomId)
+                    .SendAsync("ChatReactionUpdated", dto);
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ChatError", ex.Message);
+            }
+        }
+
+        public async Task DeleteChatMessage(int messageId)
+        {
+            try
+            {
+                var playerId = await GetCurrentPlayerId();
+
+                var historyMessage = await _gamesRepository.Context.ChatMessages
+                    .FirstOrDefaultAsync(m => m.Id == messageId);
+
+                if (historyMessage == null)
+                {
+                    await Clients.Caller.SendAsync("ChatError", "Message was not found.");
+                    return;
+                }
+
+                var roomId = historyMessage.GameRoomId;
+
+                var deleted = await _chatService.DeleteMessageAsync(messageId, playerId);
+
+                if (!deleted)
+                {
+                    await Clients.Caller.SendAsync("ChatError", "You can delete only your own messages.");
+                    return;
+                }
+
+                await Clients.Group(roomId)
+                    .SendAsync("ChatMessageDeleted", new
+                    {
+                        MessageId = messageId,
+                        RoomId = roomId
+                    });
+            }
+            catch (Exception ex)
+            {
+                await Clients.Caller.SendAsync("ChatError", ex.Message);
+            }
         }
     }
 }
