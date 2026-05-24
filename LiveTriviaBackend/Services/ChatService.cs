@@ -1,7 +1,6 @@
 using live_trivia.Data;
 using live_trivia.DTOs.Chat;
 using live_trivia.Interfaces;
-using live_trivia.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace live_trivia.Services;
@@ -80,39 +79,28 @@ public class ChatService : IChatService
             .ToList();
     }
 
-    public async Task DeleteChatMessage(int messageId)
+    public async Task<bool> DeleteMessageAsync(int messageId, int playerId)
     {
-        try
-        {
-            var playerId = await GetCurrentPlayerId();
+        var message = await _context.ChatMessages
+            .Include(m => m.Reactions)
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.DeletedAt == null);
 
-            var roomId = await _chatService.GetMessageRoomIdAsync(messageId);
+        if (message == null)
+            return false;
 
-            if (roomId == null)
-            {
-                await Clients.Caller.SendAsync("ChatError", "Message was not found.");
-                return;
-            }
+        if (message.IsSystemMessage)
+            return false;
 
-            var deleted = await _chatService.DeleteMessageAsync(messageId, playerId);
+        if (message.SenderPlayerId != playerId)
+            return false;
 
-            if (!deleted)
-            {
-                await Clients.Caller.SendAsync("ChatError", "You can delete only your own messages.");
-                return;
-            }
+        message.DeletedAt = DateTime.UtcNow;
 
-            await Clients.Group(roomId)
-                .SendAsync("ChatMessageDeleted", new
-                {
-                    MessageId = messageId,
-                    RoomId = roomId
-                });
-        }
-        catch (Exception ex)
-        {
-            await Clients.Caller.SendAsync("ChatError", ex.Message);
-        }
+        _context.MessageReactions.RemoveRange(message.Reactions);
+
+        await _context.SaveChangesAsync();
+
+        return true;
     }
 
     public async Task<ChatMessageDto?> ToggleReactionAsync(

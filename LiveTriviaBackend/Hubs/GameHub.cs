@@ -611,16 +611,13 @@ namespace live_trivia.Hubs
             {
                 var playerId = await GetCurrentPlayerId();
 
-                var historyMessage = await _gamesRepository.Context.ChatMessages
-                    .FirstOrDefaultAsync(m => m.Id == messageId);
+                var roomId = await _chatService.GetMessageRoomIdAsync(messageId);
 
-                if (historyMessage == null)
+                if (roomId == null)
                 {
                     await Clients.Caller.SendAsync("ChatError", "Message was not found.");
                     return;
                 }
-
-                var roomId = historyMessage.GameRoomId;
 
                 var deleted = await _chatService.DeleteMessageAsync(messageId, playerId);
 
@@ -630,12 +627,11 @@ namespace live_trivia.Hubs
                     return;
                 }
 
-                await Clients.Group(roomId)
-                    .SendAsync("ChatMessageDeleted", new
-                    {
-                        MessageId = messageId,
-                        RoomId = roomId
-                    });
+                await Clients.Group(roomId).SendAsync("ChatMessageDeleted", new
+                {
+                    MessageId = messageId,
+                    RoomId = roomId
+                });
             }
             catch (Exception ex)
             {

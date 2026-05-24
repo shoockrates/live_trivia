@@ -1,7 +1,8 @@
-namespace live_trivia.Models;
+namespace live_trivia;
 
 public class ChatMessage : BaseEntity
 {
+    public int Id { get; set; }
     public string GameRoomId { get; set; } = string.Empty;
 
     public int? SenderPlayerId { get; set; }

@@ -12,7 +12,7 @@ public interface IChatService
 
     Task<List<ChatMessageDto>> GetRoomHistoryAsync(string roomId);
 
-    Task<bool> DeleteMessageAsync(int messageId, int playerId);
+   Task<bool> DeleteMessageAsync(int messageId, int playerId);
 
     Task<ChatMessageDto?> ToggleReactionAsync(
         int messageId,
