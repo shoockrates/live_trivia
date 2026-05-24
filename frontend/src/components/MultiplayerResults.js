@@ -1,6 +1,7 @@
 import React from 'react';
 import './MultiplayerResults.css';
 import signalRService from '../services/signalRService.js';
+import ChatPanel from './chat/ChatPanel';
 
 const MultiplayerResults = ({
     finalResults,
@@ -11,6 +12,7 @@ const MultiplayerResults = ({
 }) => {
     const sortedPlayers = [...finalResults.players].sort((a, b) => b.score - a.score);
     const [isResetting, setIsResetting] = React.useState(false);
+    const currentPlayerId = localStorage.getItem('playerId');
 
     const handlePlayAgain = async () => {
         if (!isHost) {
@@ -110,6 +112,13 @@ const MultiplayerResults = ({
                     </div>
                 </div>
 
+                <ChatPanel
+                    roomId={roomCode}
+                    currentPlayerId={currentPlayerId}
+                    disabled={false}
+                    readOnly={true}
+                />
+                
                 <div className="results-actions">
                     <button className="action-button secondary" onClick={onBackToLobby}>
                         Back to Lobby

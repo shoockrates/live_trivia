@@ -230,6 +230,26 @@ class SignalRService {
         this.registerListener('GameReset', callback);
     }
 
+    onChatHistoryLoaded(callback) {
+    this.registerListener('ChatHistoryLoaded', callback);
+    }
+
+    onChatMessageReceived(callback) {
+        this.registerListener('ChatMessageReceived', callback);
+    }
+
+    onChatReactionUpdated(callback) {
+        this.registerListener('ChatReactionUpdated', callback);
+    }
+
+    onChatMessageDeleted(callback) {
+        this.registerListener('ChatMessageDeleted', callback);
+    }
+
+    onChatError(callback) {
+        this.registerListener('ChatError', callback);
+    }
+
     // Voting-related listeners
     onCategoryVotingStarted(callback) {
         this.registerListener('CategoryVotingStarted', callback);
@@ -460,6 +480,38 @@ class SignalRService {
             console.error('Error ending category voting:', error);
             throw error;
         }
+    }
+
+    async getChatHistory(roomId) {
+    if (!this.connection || !this.isConnected) {
+        throw new Error('SignalR connection not established');
+    }
+
+    await this.connection.invoke('GetChatHistory', roomId);
+    }
+
+    async sendChatMessage(roomId, message) {
+        if (!this.connection || !this.isConnected) {
+            throw new Error('SignalR connection not established');
+        }
+
+        await this.connection.invoke('SendChatMessage', roomId, message);
+    }
+
+    async reactToMessage(messageId, emoji) {
+        if (!this.connection || !this.isConnected) {
+            throw new Error('SignalR connection not established');
+        }
+
+        await this.connection.invoke('ReactToMessage', messageId, emoji);
+    }
+
+    async deleteChatMessage(messageId) {
+        if (!this.connection || !this.isConnected) {
+            throw new Error('SignalR connection not established');
+        }
+
+        await this.connection.invoke('DeleteChatMessage', messageId);
     }
 }
 
