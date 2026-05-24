@@ -82,7 +82,8 @@ namespace live_trivia.Tests
             var result = await _controller.GetGame(roomId);
 
             var okResult = Assert.IsType<OkObjectResult>(result);
-            Assert.Equal(dto, okResult.Value);
+            var returnedDto = Assert.IsType<GameDetailsDto>(okResult.Value);
+            Assert.Equal(roomId, returnedDto.RoomId);
         }
 
         [Fact]

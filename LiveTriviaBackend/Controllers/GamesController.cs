@@ -32,6 +32,9 @@ namespace live_trivia.Controllers
             try
             {
                 var details = await _gameService.GetGameDetailsAsync(roomId);
+                if (details == null)
+                    return NotFound("Game not found");
+
                 return Ok(details);
             }
             catch (GameNotFoundException)
@@ -204,9 +207,11 @@ namespace live_trivia.Controllers
                 pa.PlayerId == playerId &&
                 pa.QuestionId == request.QuestionId);
 
+            PlayerAnswer submittedAnswer;
+
             if (existingAnswer == null)
             {
-                var playerAnswer = new PlayerAnswer
+                submittedAnswer = new PlayerAnswer
                 {
                     PlayerId = player.Id,
                     QuestionId = question.Id,
@@ -216,13 +221,14 @@ namespace live_trivia.Controllers
                     TimeLeft = request.TimeLeft
                 };
 
-                game.PlayerAnswers.Add(playerAnswer);
+                game.PlayerAnswers.Add(submittedAnswer);
             }
             else
             {
                 existingAnswer.SelectedAnswerIndexes = request.SelectedAnswerIndexes;
                 existingAnswer.TimeLeft = request.TimeLeft;
                 existingAnswer.AnsweredAt = DateTime.UtcNow;
+                submittedAnswer = existingAnswer;
             }
 
             await _gameService.SaveChangesAsync();
@@ -235,7 +241,7 @@ namespace live_trivia.Controllers
                 Timestamp = DateTime.UtcNow
             });
 
-            return Ok(new { message = "Answer submitted successfully" });
+            return Ok(submittedAnswer);
         }
 
         [HttpGet("{roomId}/settings")]

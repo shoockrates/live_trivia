@@ -41,11 +41,33 @@ namespace live_trivia.Hubs
                 return;
             }
 
+            var playerIdClaim = Context.User?.FindFirst("playerId");
+            if (playerIdClaim == null || !int.TryParse(playerIdClaim.Value, out _))
+            {
+                await Clients.Caller.SendAsync("Error", "Player identity not found");
+                return;
+            }
+
             await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
 
             try
             {
                 var gameDetails = await _gameService.GetGameDetailsAsync(roomId);
+                if (gameDetails == null)
+                {
+                    await Clients.Caller.SendAsync("Error", "Game not found");
+                    return;
+                }
+
+                await Clients.Group(roomId).SendAsync("PlayerJoined", new
+                {
+                    PlayerId = int.Parse(playerIdClaim.Value),
+                    PlayerName = Context.User?.Identity?.Name,
+                    ConnectionId = Context.ConnectionId,
+                    Timestamp = DateTime.UtcNow,
+                    GameState = gameDetails
+                });
+
                 await Clients.Caller.SendAsync("GameStateSync", gameDetails);
             }
             catch (Exception ex)
