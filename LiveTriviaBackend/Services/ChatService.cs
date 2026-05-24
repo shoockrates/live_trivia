@@ -40,6 +40,9 @@ public class ChatService : IChatService
         if (game == null)
             throw new InvalidOperationException("Game room was not found.");
 
+        if (game.State == GameState.InProgress)
+            throw new InvalidOperationException("Chat is not available while the game is in progress.");
+
         if (!game.GamePlayers.Any(gp => gp.PlayerId == playerId))
             throw new InvalidOperationException("Player is not in this game room.");
 

@@ -184,6 +184,62 @@ namespace live_trivia.Tests.Integration
         }
 
         [Fact]
+        public async Task Chat_Is_Allowed_In_Lobby_And_After_Game_Ends_But_Blocked_During_Game()
+        {
+            var provider = BuildServiceProvider();
+
+            using (var scope = provider.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<TriviaDbContext>();
+                var chatService = scope.ServiceProvider.GetRequiredService<IChatService>();
+
+                var (game, player1, _) = await SeedChatGameAsync(context);
+
+                var lobbyMessage = await chatService.SendMessageAsync(
+                    game.RoomId,
+                    player1.Id,
+                    player1.Name,
+                    "Lobby message");
+
+                Assert.NotNull(lobbyMessage);
+                Assert.Equal("Lobby message", lobbyMessage.Message);
+
+                game.State = GameState.InProgress;
+                await context.SaveChangesAsync();
+
+                var inProgressException = await Assert.ThrowsAsync<System.InvalidOperationException>(() =>
+                    chatService.SendMessageAsync(
+                        game.RoomId,
+                        player1.Id,
+                        player1.Name,
+                        "Blocked message"));
+
+                Assert.Equal("Chat is not available while the game is in progress.", inProgressException.Message);
+
+                game.State = GameState.Finished;
+                await context.SaveChangesAsync();
+
+                var finishedMessage = await chatService.SendMessageAsync(
+                    game.RoomId,
+                    player1.Id,
+                    player1.Name,
+                    "Results message");
+
+                Assert.NotNull(finishedMessage);
+                Assert.Equal("Results message", finishedMessage.Message);
+
+                var messages = await context.ChatMessages
+                    .Where(m => m.GameRoomId == game.RoomId && m.DeletedAt == null)
+                    .OrderBy(m => m.SentAt)
+                    .ToListAsync();
+
+                Assert.Equal(2, messages.Count);
+                Assert.Equal("Lobby message", messages[0].MessageText);
+                Assert.Equal("Results message", messages[1].MessageText);
+            }
+        }
+
+        [Fact]
         public async Task Chat_Does_Not_Allow_Empty_Message()
         {
             var provider = BuildServiceProvider();
