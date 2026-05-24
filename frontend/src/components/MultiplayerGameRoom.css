@@ -138,6 +138,15 @@
 
 .players-section {
     margin-bottom: 32px;
+    background: rgba(20, 28, 36, 0.6);
+    border: 1px solid rgba(156, 200, 255, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
 }
 
 .players-section h3 {
@@ -151,6 +160,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    flex: 1;
 }
 
 .player-item {
@@ -501,6 +511,11 @@
     .status-indicator {
         padding: 6px 12px;
         font-size: 11px;
+    }
+
+    .players-section {
+        min-height: 180px;
+        padding: 20px;
     }
 }
 

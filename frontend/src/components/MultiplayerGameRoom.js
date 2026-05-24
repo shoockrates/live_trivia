@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './MultiplayerGameRoom.css';
 import signalRService from '../services/signalRService';
 import QuizSelector from './QuizSelector';
+import ChatPanel from './chat/ChatPanel';
 
 const API_BASE = 'http://localhost:5216';
 
@@ -280,12 +281,11 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         initializeConnection();
 
         return () => {
-            // Mark as unmounted
             mounted.current = false;
 
-            // Clean up listeners on unmount
             if (listenersRegistered.current && signalRService.connection) {
                 console.log('Cleaning up SignalR listeners');
+
                 signalRService.connection.off('GameStateSync');
                 signalRService.connection.off('PlayerJoined');
                 signalRService.connection.off('PlayerLeft');
@@ -298,11 +298,9 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                 signalRService.connection.off('CategoryVotingTimer');
                 signalRService.connection.off('QuizSelected');
 
-                signalRService.leaveGameRoom(roomCode).catch(() => { });
                 listenersRegistered.current = false;
             }
 
-            // Reset initialization flag so it can run again if component remounts
             initializationDone.current = false;
         };
     }, [roomCode, user.playerId, onStartGame]);
@@ -525,7 +523,13 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
         }
     };
 
-    const handleBack = () => {
+    const handleBack = async () => {
+        try {
+            await signalRService.leaveGameRoom(roomCode);
+        } catch (err) {
+            console.error('Failed to leave room:', err);
+        }
+
         onBack();
     };
 
@@ -777,6 +781,15 @@ const MultiplayerGameRoom = ({ roomCode, user, onBack, onStartGame }) => {
                         <p>Game is starting...</p>
                         <p>Redirecting to game...</p>
                     </div>
+                )}
+
+                {isWaitingState && (
+                    <ChatPanel
+                        roomId={roomCode}
+                        currentPlayerId={user.playerId}
+                        disabled={false}
+                        readOnly={false}
+                    />
                 )}
 
                 <button className="back-button" onClick={handleBack}>

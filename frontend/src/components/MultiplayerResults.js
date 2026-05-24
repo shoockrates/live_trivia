@@ -1,6 +1,7 @@
 import React from 'react';
 import './MultiplayerResults.css';
 import signalRService from '../services/signalRService.js';
+import ChatPanel from './chat/ChatPanel';
 
 const MultiplayerResults = ({
     finalResults,
@@ -11,6 +12,7 @@ const MultiplayerResults = ({
 }) => {
     const sortedPlayers = [...finalResults.players].sort((a, b) => b.score - a.score);
     const [isResetting, setIsResetting] = React.useState(false);
+    const currentPlayerId = localStorage.getItem('playerId');
 
     const handlePlayAgain = async () => {
         if (!isHost) {
@@ -57,86 +59,96 @@ const MultiplayerResults = ({
 
     return (
         <div className="multiplayer-results-container">
-            <div className="results-card">
-                <div className="results-header">
-                    <h1 className="results-title">Game Over!</h1>
-                    <p className="room-code-info">Room: <strong>{roomCode}</strong></p>
-                </div>
+            <div className="results-stack">
+                <div className="results-card">
+                    <div className="results-header">
+                        <h1 className="results-title">Game Over!</h1>
+                        <p className="room-code-info">Room: <strong>{roomCode}</strong></p>
+                    </div>
 
-                <div className="podium">
-                    {sortedPlayers[0] && (
-                        <div className="podium-place first">
-                            <div className="medal">🥇</div>
-                            <div className="player-name">{sortedPlayers[0].name}</div>
-                            <div className="player-score">{sortedPlayers[0].score} pts</div>
-                        </div>
-                    )}
-                    {sortedPlayers[1] && (
-                        <div className="podium-place second">
-                            <div className="medal">🥈</div>
-                            <div className="player-name">{sortedPlayers[1].name}</div>
-                            <div className="player-score">{sortedPlayers[1].score} pts</div>
-                        </div>
-                    )}
-                    {sortedPlayers[2] && (
-                        <div className="podium-place third">
-                            <div className="medal">🥉</div>
-                            <div className="player-name">{sortedPlayers[2].name}</div>
-                            <div className="player-score">{sortedPlayers[2].score} pts</div>
-                        </div>
-                    )}
-                </div>
+                    <div className="podium">
+                        {sortedPlayers[0] && (
+                            <div className="podium-place first">
+                                <div className="medal">🥇</div>
+                                <div className="player-name">{sortedPlayers[0].name}</div>
+                                <div className="player-score">{sortedPlayers[0].score} pts</div>
+                            </div>
+                        )}
+                        {sortedPlayers[1] && (
+                            <div className="podium-place second">
+                                <div className="medal">🥈</div>
+                                <div className="player-name">{sortedPlayers[1].name}</div>
+                                <div className="player-score">{sortedPlayers[1].score} pts</div>
+                            </div>
+                        )}
+                        {sortedPlayers[2] && (
+                            <div className="podium-place third">
+                                <div className="medal">🥉</div>
+                                <div className="player-name">{sortedPlayers[2].name}</div>
+                                <div className="player-score">{sortedPlayers[2].score} pts</div>
+                            </div>
+                        )}
+                    </div>
 
-                <div className="full-leaderboard">
-                    <h3>Final Standings</h3>
-                    <div className="leaderboard-list">
-                        {sortedPlayers.map((player, index) => (
-                            <div key={player.playerId} className={`leaderboard-item ${index < 3 ? 'top3' : ''}`}>
-                                <div className="rank">#{index + 1}</div>
-                                <div className="player-info">
-                                    <div className="player-avatar">
-                                        {player.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div className="player-name">{player.name}</div>
-                                        <div className="player-stats">
-                                            {player.correct} correct • {player.wrong} wrong
+                    <div className="full-leaderboard">
+                        <h3>Final Standings</h3>
+                        <div className="leaderboard-list">
+                            {sortedPlayers.map((player, index) => (
+                                <div key={player.playerId} className={`leaderboard-item ${index < 3 ? 'top3' : ''}`}>
+                                    <div className="rank">#{index + 1}</div>
+                                    <div className="player-info">
+                                        <div className="player-avatar">
+                                            {player.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className="player-name">{player.name}</div>
+                                            <div className="player-stats">
+                                                {player.correct} correct • {player.wrong} wrong
+                                            </div>
                                         </div>
                                     </div>
+                                    <div className="final-score">{player.score} pts</div>
                                 </div>
-                                <div className="final-score">{player.score} pts</div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="results-actions">
+                        <button className="action-button secondary" onClick={onBackToLobby}>
+                            Back to Lobby
+                        </button>
+                        {isHost ? (
+                            <button
+                                className="action-button primary"
+                                onClick={handlePlayAgain}
+                                disabled={isResetting}
+                            >
+                                {isResetting ? (
+                                    <>
+                                        <div className="waiting-spinner"></div>
+                                        <span>Resetting...</span>
+                                    </>
+                                ) : (
+                                    <span>Play Again</span>
+                                )}
+                            </button>
+                        ) : (
+                            <div className="action-button waiting-host">
+                                <div className="waiting-spinner"></div>
+                                <span>Waiting for host...</span>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
 
-                <div className="results-actions">
-                    <button className="action-button secondary" onClick={onBackToLobby}>
-                        Back to Lobby
-                    </button>
-                    {isHost ? (
-                        <button
-                            className="action-button primary"
-                            onClick={handlePlayAgain}
-                            disabled={isResetting}
-                        >
-                            {isResetting ? (
-                                <>
-                                    <div className="waiting-spinner"></div>
-                                    <span>Resetting...</span>
-                                </>
-                            ) : (
-                                <span>Play Again</span>
-                            )}
-                        </button>
-                    ) : (
-                        <div className="action-button waiting-host">
-                            <div className="waiting-spinner"></div>
-                            <span>Waiting for host...</span>
-                        </div>
-                    )}
+                <ChatPanel
+                    roomId={roomCode}
+                    currentPlayerId={currentPlayerId}
+                    disabled={false}
+                    readOnly={false}
+                    suppressConnectionErrors={true}
+                />
                 </div>
-            </div>
         </div>
     );
 };

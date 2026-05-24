@@ -59,6 +59,7 @@ builder.Services.AddScoped<ILeaderboardService, LeaderboardService>();
 builder.Services.AddScoped<IGameService, GameService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 
 builder.Services.AddSingleton<IActiveGamesService, ActiveGamesService>();
 

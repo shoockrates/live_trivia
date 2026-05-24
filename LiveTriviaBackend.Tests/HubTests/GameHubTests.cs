@@ -71,7 +71,13 @@ namespace live_trivia.Tests.HubTests
 
             var groups = new Mock<IGroupManager>();
 
-            var hub = new GameHub(_mockGameService.Object, gamesRepo, _mockActiveGamesService.Object)
+            var mockChatService = new Mock<IChatService>();
+
+            var hub = new GameHub(
+                _mockGameService.Object,
+                gamesRepo,
+                _mockActiveGamesService.Object,
+                mockChatService.Object)
             {
                 Context = ctx.Object,
                 Clients = clients.Object,
